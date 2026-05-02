@@ -3,115 +3,107 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Real Estate Platform - Login</title>
+    <title>AI-Plot - Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body {
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        .login-card {
-            max-width: 450px;
-            width: 100%;
-            border-radius: 1rem;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-        }
-        .alert {
-            display: none;
-        }
-    </style>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js" defer></script>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="card login-card p-4">
-        <div class="text-center mb-4">
-            <i class="fas fa-building fa-3x text-primary"></i>
-            <h2 class="mt-2">AI Real Estate</h2>
-            <p class="text-muted">Sign in to your account</p>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">📊 AI-Plot</a>
+            <div class="d-flex">
+                <span class="navbar-text me-3" id="user-display"></span>
+                <button class="btn btn-outline-light btn-sm logout-btn">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card text-bg-primary">
+                    <div class="card-body">
+                        <h5 class="card-title">Plots</h5>
+                        <p class="card-text display-6" id="plot-count">0</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-bg-success">
+                    <div class="card-body">
+                        <h5 class="card-title">Leads</h5>
+                        <p class="card-text display-6" id="lead-count">0</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-bg-warning">
+                    <div class="card-body">
+                        <h5 class="card-title">Deals</h5>
+                        <p class="card-text display-6" id="deal-count">0</p>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div id="alert-box" class="alert" role="alert"></div>
-
-        <form id="login-form">
-            <div class="mb-3">
-                <label for="email" class="form-label">Email address</label>
-                <input type="email" class="form-control" id="email" placeholder="name@example.com" required>
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Your Plots</h5>
+                <div>
+                    <button class="btn btn-primary btn-sm" id="import-file-btn">
+                        <i class="bi bi-upload"></i> Import CSV/JSON
+                    </button>
+                    <input type="file" id="import-file-input" accept=".csv,.json" style="display: none;">
+                </div>
             </div>
-            <div class="mb-3">
-                <label for="password" class="form-label">Password</label>
-                <input type="password" class="form-control" id="password" placeholder="••••••••" required>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped" id="plots-table">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Type</th>
+                                <th>Created</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
             </div>
-            <div class="mb-3 form-check">
-                <input type="checkbox" class="form-check-input" id="remember-me">
-                <label class="form-check-label" for="remember-me">Remember me</label>
-            </div>
-            <button type="submit" class="btn btn-primary w-100 mb-3" id="login-btn">
-                <i class="fas fa-sign-in-alt"></i> Sign In
-            </button>
-            <button type="button" class="btn btn-outline-secondary w-100 mb-3" id="guest-btn">
-                <i class="fas fa-user-friends"></i> Continue as Guest
-            </button>
-            <div class="text-center">
-                <p class="text-muted">Demo: <strong>admin@aiplot.com</strong> / <strong>admin123</strong></p>
-                <a href="register.html" class="text-decoration-none">Don't have an account? Register</a>
-            </div>
-        </form>
+        </div>
     </div>
 
+    <div class="modal fade" id="plot-detail-modal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toast-container"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="app.js"></script>
+    <script src="plot-import.js"></script>
     <script>
-        // Helper to show alert messages
-        function showAlert(message, type) {
-            const box = document.getElementById('alert-box');
-            box.className = `alert alert-${type}`;
-            box.textContent = message;
-            box.style.display = 'block';
-            setTimeout(() => { box.style.display = 'none'; }, 5000);
-        }
-
-        // Set session and redirect
-        function createSession(email, name, role = 'guest') {
-            const sessionData = { email, name, role };
-            const remember = document.getElementById('remember-me').checked;
-            if (remember) {
-                localStorage.setItem('aiplot_session', JSON.stringify(sessionData));
-            } else {
-                sessionStorage.setItem('aiplot_session', JSON.stringify(sessionData));
+        document.addEventListener('DOMContentLoaded', () => {
+            const session = localStorage.getItem('aiplot_session') || sessionStorage.getItem('aiplot_session');
+            if (!session) {
+                window.location.href = 'login.html';
+                return;
             }
-            window.location.href = 'index.html';
-        }
-
-        // Demo users (always works, no backend)
-        const DEMO_USERS = [
-            { email: 'admin@aiplot.com', password: 'admin123', name: 'Admin User', role: 'admin' },
-            { email: 'agent@aiplot.com', password: 'agent123', name: 'John Smith', role: 'agent' },
-            { email: 'emma@aiplot.com', password: 'agent123', name: 'Emma Wilson', role: 'agent' }
-        ];
-
-        // Form submit
-        document.getElementById('login-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const email = document.getElementById('email').value.trim();
-            const password = document.getElementById('password').value;
-            const user = DEMO_USERS.find(u => u.email === email && u.password === password);
-            
-            if (user) {
-                createSession(user.email, user.name, user.role);
-            } else {
-                showAlert('Invalid email or password. Try the demo credentials above.', 'danger');
-            }
+            const user = JSON.parse(session);
+            document.getElementById('user-display').textContent = `👤 ${user.name || user.email}`;
         });
-
-        // Guest login
-        document.getElementById('guest-btn').addEventListener('click', function() {
-            createSession('guest@aiplot.com', 'Guest User', 'guest');
-        });
-
-        // NO automatic redirect if session exists – we only go to dashboard after user action
-        // This breaks the infinite loop
     </script>
 </body>
 </html>
