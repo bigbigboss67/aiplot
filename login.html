@@ -1,117 +1,657 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Real Estate Platform - Login</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Login - AI Plot Portal</title>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
         }
-        .login-card {
+
+        .login-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             max-width: 450px;
             width: 100%;
-            border-radius: 1rem;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            overflow: hidden;
+            animation: slideUp 0.5s ease-out;
         }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .login-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px 30px;
+            text-align: center;
+            color: white;
+        }
+
+        .login-header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .login-header p {
+            opacity: 0.9;
+            font-size: 0.95em;
+        }
+
+        .login-body {
+            padding: 40px 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #2d3748;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .input-wrapper i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #a0aec0;
+            font-size: 1.1em;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 14px 15px 14px 45px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: all 0.3s;
+            outline: none;
+        }
+
+        .form-group input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-options {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            font-size: 0.9em;
+        }
+
+        .remember-me {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #4a5568;
+            cursor: pointer;
+        }
+
+        .remember-me input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .forgot-password {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s;
+        }
+
+        .forgot-password:hover {
+            color: #764ba2;
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 15px;
+        }
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-login:active {
+            transform: translateY(0);
+        }
+
+        .btn-login:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-guest {
+            width: 100%;
+            padding: 15px;
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-guest:hover {
+            background: #f7fafc;
+        }
+
+        .divider {
+            text-align: center;
+            margin: 25px 0;
+            position: relative;
+        }
+
+        .divider::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: #e2e8f0;
+        }
+
+        .divider span {
+            background: white;
+            padding: 0 15px;
+            color: #a0aec0;
+            font-size: 0.9em;
+            position: relative;
+        }
+
+        .demo-accounts {
+            background: #f7fafc;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 25px;
+        }
+
+        .demo-accounts h3 {
+            color: #2d3748;
+            font-size: 0.95em;
+            margin-bottom: 12px;
+        }
+
+        .demo-account {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        .demo-account:last-child {
+            margin-bottom: 0;
+        }
+
+        .demo-account .role {
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .demo-account .credentials {
+            color: #718096;
+            font-family: monospace;
+        }
+
         .alert {
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
             display: none;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .alert-error {
+            background: #fff5f5;
+            border: 1px solid #fc8181;
+            color: #c53030;
+        }
+
+        .alert-success {
+            background: #f0fff4;
+            border: 1px solid #68d391;
+            color: #276749;
+        }
+
+        .alert-info {
+            background: #ebf8ff;
+            border: 1px solid #63b3ed;
+            color: #2b6cb0;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .firebase-status {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .firebase-status.connected {
+            background: #f0fff4;
+            color: #276749;
+        }
+
+        .firebase-status.disconnected {
+            background: #fff5f5;
+            color: #c53030;
+        }
+
+        .register-link {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.9em;
+            color: #718096;
+        }
+
+        .register-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .register-link a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 480px) {
+            .login-header {
+                padding: 30px 20px;
+            }
+
+            .login-header h1 {
+                font-size: 1.7em;
+            }
+
+            .login-body {
+                padding: 30px 20px;
+            }
+
+            .form-options {
+                flex-direction: column;
+                gap: 10px;
+                align-items: flex-start;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="card login-card p-4">
-        <div class="text-center mb-4">
-            <i class="fas fa-building fa-3x text-primary"></i>
-            <h2 class="mt-2">AI Real Estate</h2>
-            <p class="text-muted">Sign in to your account</p>
+    <div class="login-container">
+        <div class="login-header">
+            <h1><i class="fas fa-building"></i> AI Plot</h1>
+            <p>Smart Plot Management Portal</p>
         </div>
 
-        <div id="alert-box" class="alert" role="alert"></div>
+        <div class="login-body">
+            <div class="info-box" style="background: #fefcbf; border-left: 4px solid #ecc94b; padding: 15px; margin-bottom: 20px; border-radius: 4px; text-align: center;">
+                <strong>⚠️ Use Direct Login:</strong> <a href="direct-login.html" style="color: #667eea; font-weight: bold; font-size: 1.1em;">Click Here to Login →</a>
+            </div>
 
-        <form id="login-form">
-            <div class="mb-3">
-                <label for="email" class="form-label">Email address</label>
-                <input type="email" class="form-control" id="email" placeholder="name@example.com" required>
+            <div id="firebase-status" class="firebase-status disconnected">
+                <i class="fas fa-circle"></i> Connecting to Firebase...
             </div>
-            <div class="mb-3">
-                <label for="password" class="form-label">Password</label>
-                <input type="password" class="form-control" id="password" placeholder="••••••••" required>
+
+            <div id="alert-box" class="alert"></div>
+
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-envelope"></i>
+                        <input type="email" id="email" placeholder="agent@aiplot.com" required autocomplete="email">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" id="password" placeholder="••••••••" required autocomplete="current-password">
+                    </div>
+                </div>
+
+                <div class="form-options">
+                    <label class="remember-me">
+                        <input type="checkbox" id="remember-me">
+                        <span>Remember me</span>
+                    </label>
+                    <a href="#" class="forgot-password" onclick="showForgotPassword()">Forgot Password?</a>
+                </div>
+
+                <button type="submit" class="btn-login" id="login-btn">
+                    <i class="fas fa-sign-in-alt"></i> Sign In
+                </button>
+            </form>
+
+            <div class="divider">
+                <span>OR</span>
             </div>
-            <div class="mb-3 form-check">
-                <input type="checkbox" class="form-check-input" id="remember-me">
-                <label class="form-check-label" for="remember-me">Remember me</label>
-            </div>
-            <button type="submit" class="btn btn-primary w-100 mb-3" id="login-btn">
-                <i class="fas fa-sign-in-alt"></i> Sign In
+
+            <button class="btn-guest" onclick="loginAsGuest()">
+                <i class="fas fa-user-clock"></i> Continue as Guest
             </button>
-            <button type="button" class="btn btn-outline-secondary w-100 mb-3" id="guest-btn">
-                <i class="fas fa-user-friends"></i> Continue as Guest
-            </button>
-            <div class="text-center">
-                <p class="text-muted">Demo: <strong>admin@aiplot.com</strong> / <strong>admin123</strong></p>
-                <a href="register.html" class="text-decoration-none">Don't have an account? Register</a>
+
+            <div class="register-link">
+                Don't have an account? <a href="register.html">Register here</a>
             </div>
-        </form>
+            
+            <div class="register-link" style="margin-top: 10px;">
+                Already approved? <a href="verify.html">Verify your account</a>
+            </div>
+            
+            <div class="register-link" style="margin-top: 10px; padding: 10px; background: #fefcbf; border-radius: 8px;">
+                ⚠️ Having trouble logging in? <a href="direct-login.html"><strong>Use Direct Login</strong></a>
+            </div>
+        </div>
     </div>
 
     <script>
-        // Helper to show alert messages
-        function showAlert(message, type) {
-            const box = document.getElementById('alert-box');
-            box.className = `alert alert-${type}`;
-            box.textContent = message;
-            box.style.display = 'block';
-            setTimeout(() => { box.style.display = 'none'; }, 5000);
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDKthkVZLmK5Y_wT0Jmx90UEkzJs_Pz9-I",
+            authDomain: "plot-ai-87781.firebaseapp.com",
+            databaseURL: "https://plot-ai-87781-default-rtdb.firebaseio.com",
+            projectId: "plot-ai-87781",
+            storageBucket: "plot-ai-87781.firebasestorage.app",
+            messagingSenderId: "723228647195",
+            appId: "1:723228647195:web:00693e31e923014e1efdbe"
+        };
+
+        // Initialize Firebase
+        let auth, db;
+        try {
+            const app = firebase.initializeApp(firebaseConfig);
+            auth = firebase.auth();
+            db = firebase.database();
+            console.log('✅ Firebase initialized');
+            updateFirebaseStatus(true);
+        } catch (error) {
+            console.error('❌ Firebase init failed:', error);
+            updateFirebaseStatus(false);
         }
 
-        // Set session and redirect
-        function createSession(email, name, role = 'guest') {
-            const sessionData = { email, name, role };
-            const remember = document.getElementById('remember-me').checked;
-            if (remember) {
-                localStorage.setItem('aiplot_session', JSON.stringify(sessionData));
-            } else {
-                sessionStorage.setItem('aiplot_session', JSON.stringify(sessionData));
-            }
-            window.location.href = 'index.html';
-        }
-
-        // Demo users (always works, no backend)
-        const DEMO_USERS = [
-            { email: 'admin@aiplot.com', password: 'admin123', name: 'Admin User', role: 'admin' },
-            { email: 'agent@aiplot.com', password: 'agent123', name: 'John Smith', role: 'agent' },
-            { email: 'emma@aiplot.com', password: 'agent123', name: 'Emma Wilson', role: 'agent' }
+        // Demo users database
+        const demoUsers = [
+            { email: 'admin@aiplot.com', password: 'admin123', name: 'Admin User', role: 'admin', status: 'active' },
+            { email: 'agent@aiplot.com', password: 'agent123', name: 'John Smith', role: 'agent', status: 'active' },
+            { email: 'emma@aiplot.com', password: 'agent123', name: 'Emma Wilson', role: 'agent', status: 'active' }
         ];
 
-        // Form submit
-        document.getElementById('login-form').addEventListener('submit', function(e) {
+        function updateFirebaseStatus(connected) {
+            const statusEl = document.getElementById('firebase-status');
+            if (connected) {
+                statusEl.className = 'firebase-status connected';
+                statusEl.innerHTML = '<i class="fas fa-check-circle"></i> Firebase Connected';
+            } else {
+                statusEl.className = 'firebase-status disconnected';
+                statusEl.innerHTML = '<i class="fas fa-exclamation-circle"></i> Firebase Connection Failed';
+            }
+        }
+
+        function showAlert(message, type = 'error') {
+            const alertBox = document.getElementById('alert-box');
+            alertBox.className = `alert alert-${type}`;
+            alertBox.innerHTML = `<i class="fas fa-${type === 'error' ? 'exclamation-circle' : type === 'success' ? 'check-circle' : 'info-circle'}"></i> ${message}`;
+            alertBox.style.display = 'block';
+            
+            setTimeout(() => {
+                alertBox.style.display = 'none';
+            }, 5000);
+        }
+
+        // Login form handler
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
+            
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
-            const user = DEMO_USERS.find(u => u.email === email && u.password === password);
-            
-            if (user) {
-                createSession(user.email, user.name, user.role);
-            } else {
-                showAlert('Invalid email or password. Try the demo credentials above.', 'danger');
+            const rememberMe = document.getElementById('remember-me').checked;
+            const loginBtn = document.getElementById('login-btn');
+
+            // Disable button and show loading
+            loginBtn.disabled = true;
+            loginBtn.innerHTML = '<span class="loading"></span> Signing in...';
+
+            try {
+                // Try Firebase Authentication first
+                if (auth) {
+                    try {
+                        const userCredential = await auth.signInWithEmailAndPassword(email, password);
+                        const user = userCredential.user;
+                        
+                        console.log('✅ Firebase Auth successful:', user.email);
+                        
+                        // Get user data from database
+                        const userRef = db.ref('users/' + user.uid);
+                        const snapshot = await userRef.once('value');
+                        const userData = snapshot.val();
+
+                        if (userData && (userData.status === 'active' || userData.status === 'approved')) {
+                            // Auto-activate user on first login after approval
+                            if (userData.status === 'approved' && !userData.verified) {
+                                // User approved but not verified yet - check if they verified
+                                if (!userData.verificationCode) {
+                                    // No verification code needed (admin skipped verification)
+                                    await userRef.update({ status: 'active', verifiedAt: new Date().toISOString() });
+                                } else if (userData.verificationCode && userData.verified) {
+                                    // Already verified, activate
+                                    await userRef.update({ status: 'active' });
+                                }
+                            }
+                            
+                            // Save session
+                            const session = {
+                                uid: user.uid,
+                                email: user.email,
+                                name: userData.name || user.email,
+                                role: userData.role || 'agent',
+                                firebaseAuth: true
+                            };
+
+                            if (rememberMe) {
+                                localStorage.setItem('aiplot_session', JSON.stringify(session));
+                            } else {
+                                sessionStorage.setItem('aiplot_session', JSON.stringify(session));
+                            }
+
+                            showAlert('Login successful! Redirecting...', 'success');
+                            
+                            // Redirect to main portal
+                            setTimeout(() => {
+                                window.location.href = 'index.html';
+                            }, 1000);
+                            
+                            return;
+                        } else if (userData && userData.status === 'pending') {
+                            showAlert('Your account is pending admin approval. Please contact administrator.', 'error');
+                        } else {
+                            showAlert('Account is disabled. Contact administrator.', 'error');
+                        }
+                    } catch (firebaseError) {
+                        console.log('Firebase Auth failed, trying demo users:', firebaseError.message);
+                    }
+                }
+
+                // Fallback to demo users
+                const user = demoUsers.find(u => u.email === email && u.password === password && u.status === 'active');
+                
+                if (user) {
+                    const session = {
+                        email: user.email,
+                        name: user.name,
+                        role: user.role,
+                        firebaseAuth: false
+                    };
+
+                    if (rememberMe) {
+                        localStorage.setItem('aiplot_session', JSON.stringify(session));
+                    } else {
+                        sessionStorage.setItem('aiplot_session', JSON.stringify(session));
+                    }
+
+                    showAlert('Login successful! Redirecting...', 'success');
+                    
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 1000);
+                } else {
+                    showAlert('Invalid email or password. Please try again.', 'error');
+                }
+
+            } catch (error) {
+                console.error('Login error:', error);
+                showAlert('Login failed: ' + error.message, 'error');
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In';
             }
         });
 
         // Guest login
-        document.getElementById('guest-btn').addEventListener('click', function() {
-            createSession('guest@aiplot.com', 'Guest User', 'guest');
+        function loginAsGuest() {
+            const session = {
+                email: 'guest@petra.com',
+                name: 'Guest User',
+                role: 'guest',
+                firebaseAuth: false
+            };
+
+            sessionStorage.setItem('petra_crm_session', JSON.stringify(session));
+            showAlert('Logged in as Guest. Data will be local only.', 'info');
+            
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 1000);
+        }
+
+        // Show forgot password
+        function showForgotPassword() {
+            const email = prompt('Enter your email address:');
+            if (email) {
+                if (auth) {
+                    auth.sendPasswordResetEmail(email)
+                        .then(() => {
+                            showAlert('Password reset email sent! Check your inbox.', 'success');
+                        })
+                        .catch(error => {
+                            showAlert('Failed to send reset email: ' + error.message, 'error');
+                        });
+                } else {
+                    showAlert('Firebase not connected. Contact administrator to reset password.', 'error');
+                }
+            }
+        }
+
+
+        // Check if already logged in
+        window.addEventListener('DOMContentLoaded', () => {
+            const session = localStorage.getItem('aiplot_session') || sessionStorage.getItem('aiplot_session');
+            if (session) {
+                const userData = JSON.parse(session);
+                showAlert(`Welcome back, ${userData.name}! Redirecting...`, 'success');
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 1000);
+            }
         });
 
-        // NO automatic redirect if session exists – we only go to dashboard after user action
-        // This breaks the infinite loop
+        // Firebase auth state observer
+        if (auth) {
+            auth.onAuthStateChanged((user) => {
+                if (user) {
+                    console.log('✅ User signed in:', user.email);
+                } else {
+                    console.log('ℹ️ No user signed in');
+                }
+            });
+        }
+
     </script>
 </body>
 </html>
+<script async data-explicit-opt-in="true" data-cookie-opt-in="true" data-deployment-id="dpl_4qjyHj6KLeGMaGjXXZnK3E6UaQsz" src="https://vercel.live/_next-live/feedback/feedback.js"></script>
