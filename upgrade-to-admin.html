@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upgrade to Admin</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0a1628 0%, #1a2744 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: #1a2744;
+            border: 1px solid #2a3f6f;
+            border-radius: 12px;
+            padding: 40px;
+            max-width: 700px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+        h1 { color: #ffffff; font-size: 28px; margin-bottom: 10px; text-align: center; }
+        .subtitle { color: #8892b0; text-align: center; margin-bottom: 30px; }
+        .user-card {
+            background: #0a1628;
+            border: 1px solid #2a3f6f;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .user-card h3 { color: #ffffff; margin-bottom: 12px; }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #2a3f6f;
+        }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-label { color: #8892b0; }
+        .detail-value { color: #ccd6f6; font-weight: 600; }
+        .status-agent { color: #f59e0b; }
+        .status-admin { color: #10b981; }
+        button {
+            width: 100%;
+            padding: 16px;
+            background: #10b981;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-bottom: 12px;
+        }
+        button:hover { background: #059669; }
+        button:disabled { background: #4a5568; cursor: not-allowed; }
+        .btn-danger { background: #ef4444; }
+        .btn-danger:hover { background: #dc2626; }
+        .log {
+            background: #0a1628;
+            border: 1px solid #2a3f6f;
+            border-radius: 8px;
+            padding: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            margin-top: 20px;
+        }
+        .log-entry { margin-bottom: 8px; padding: 8px; border-radius: 4px; }
+        .log-entry.info { color: #60a5fa; background: rgba(59, 130, 246, 0.05); }
+        .log-entry.success { color: #10b981; background: rgba(16, 185, 129, 0.1); }
+        .log-entry.error { color: #ef4444; background: rgba(239, 68, 68, 0.1); }
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            background: rgba(16, 185, 129, 0.1);
+            border: 2px solid #10b981;
+        }
+        .result h3 { color: #ffffff; margin-bottom: 10px; }
+        .result a {
+            display: inline-block;
+            margin-top: 10px;
+            color: #10b981;
+            font-weight: 700;
+            font-size: 18px;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>👑 Upgrade to Admin</h1>
+        <p class="subtitle">Fix permissions for r.k@at.world</p>
+
+        <div class="user-card" id="userCard">
+            <h3>Current Account Status</h3>
+            <p style="color: #8892b0;">Loading...</p>
+        </div>
+
+        <button onclick="upgradeToAdmin()" id="upgradeBtn">👑 UPGRADE TO ADMIN</button>
+        <button onclick="fixAllUsers()" class="btn-danger" id="fixAllBtn">🔧 FIX ALL USERS TO ADMIN</button>
+
+        <div class="log" id="log">
+            <div class="log-entry info">Ready to upgrade account...</div>
+        </div>
+
+        <div id="result"></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+        import { getDatabase, ref, get, update } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
+
+        const firebaseConfig = {
+            apiKey: 'AIzaSyDKthkVZLmK5Y_wT0Jmx90UEkzJs_Pz9-I',
+            authDomain: 'plot-ai-87781.firebaseapp.com',
+            databaseURL: 'https://plot-ai-87781-default-rtdb.firebaseio.com',
+            projectId: 'plot-ai-87781',
+            storageBucket: 'plot-ai-87781.firebasestorage.app',
+            messagingSenderId: '723228647195',
+            appId: '1:723228647195:web:00693e31e923014e1efdbe',
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        let targetUser = null;
+        let targetUid = null;
+
+        function addLog(message, type = 'info') {
+            const log = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            entry.textContent = `[${timestamp}] ${message}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        // Load user data
+        async function loadUser() {
+            const userCard = document.getElementById('userCard');
+            
+            try {
+                const snapshot = await get(ref(db, 'users'));
+                
+                if (!snapshot.exists()) {
+                    userCard.innerHTML = '<h3>No Users Found</h3><p style="color: #8892b0;">No users in database</p>';
+                    return;
+                }
+
+                const users = snapshot.val();
+                let foundUser = null;
+                let foundUid = null;
+
+                // Find r.k@at.world user
+                for (const [uid, userData] of Object.entries(users)) {
+                    if (userData.email === 'r.k@at.world' || userData.email === 'r.k@world.com') {
+                        foundUser = userData;
+                        foundUid = uid;
+                        targetUser = userData;
+                        targetUid = uid;
+                        break;
+                    }
+                }
+
+                if (!foundUser) {
+                    userCard.innerHTML = `
+                        <h3>⚠️ User Not Found</h3>
+                        <p style="color: #8892b0;">r.k@at.world not found in database</p>
+                    `;
+                    addLog('User r.k@at.world not found', 'error');
+                    return;
+                }
+
+                const roleClass = foundUser.role === 'admin' ? 'status-admin' : 'status-agent';
+                const statusClass = foundUser.status === 'active' ? 'status-admin' : 'status-agent';
+
+                userCard.innerHTML = `
+                    <h3>Current Account: ${foundUser.name || 'N/A'}</h3>
+                    <div class="detail-row">
+                        <span class="detail-label">Email:</span>
+                        <span class="detail-value">${foundUser.email}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Current Role:</span>
+                        <span class="detail-value ${roleClass}">${foundUser.role || 'agent'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Status:</span>
+                        <span class="detail-value ${statusClass}">${foundUser.status || 'pending'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">UID:</span>
+                        <span class="detail-value" style="font-size: 11px;">${foundUid}</span>
+                    </div>
+                `;
+
+                addLog(`Found user: ${foundUser.email}`, 'success');
+                addLog(`Current role: ${foundUser.role || 'agent'}`, foundUser.role === 'admin' ? 'success' : 'warning');
+
+            } catch (error) {
+                userCard.innerHTML = `<p style="color: #ef4444;">Error: ${error.message}</p>`;
+                addLog(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        window.upgradeToAdmin = async function() {
+            if (!targetUid) {
+                addLog('No user found to upgrade!', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('upgradeBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Upgrading...';
+
+            addLog('═══════════════════════════════════════', 'info');
+            addLog('UPGRADING TO ADMIN', 'info');
+            addLog('═══════════════════════════════════════', 'info');
+            addLog(`User: ${targetUser.email}`, 'info');
+            addLog(`Current role: ${targetUser.role || 'agent'}`, 'warning');
+
+            try {
+                const adminProfile = {
+                    ...targetUser,
+                    role: 'admin',
+                    status: 'active',
+                    permissions: {
+                        manageUsers: true,
+                        manageAgents: true,
+                        manageRoles: true,
+                        managePermissions: true,
+                        managePlots: true,
+                        manageCIS: true,
+                        manageLeads: true,
+                        manageDeals: true,
+                        manageActivities: true,
+                        viewReports: true,
+                        deleteRecords: true,
+                        importData: true,
+                        exportData: true,
+                        systemSettings: true
+                    },
+                    updatedAt: new Date().toISOString()
+                };
+
+                await update(ref(db, `users/${targetUid}`), adminProfile);
+
+                addLog('✅ Role updated to: admin', 'success');
+                addLog('✅ Status updated to: active', 'success');
+                addLog('✅ All permissions granted!', 'success');
+
+                addLog('\n═══════════════════════════════════════', 'success');
+                addLog('✅ SUCCESS! You are now an ADMIN!', 'success');
+                addLog('═══════════════════════════════════════', 'success');
+
+                document.getElementById('result').innerHTML = `
+                    <div class="result">
+                        <h3>🎉 Upgraded to Admin!</h3>
+                        <p><strong>Email:</strong> ${targetUser.email}</p>
+                        <p><strong>New Role:</strong> Admin</p>
+                        <p><strong>Permissions:</strong> Full Access</p>
+                        <a href="https://ai-plot-app.vercel.app/">→ Refresh App</a>
+                    </div>
+                `;
+
+                btn.textContent = '✅ UPGRADED!';
+
+            } catch (error) {
+                addLog(`❌ Error: ${error.message}`, 'error');
+                btn.disabled = false;
+                btn.textContent = '👑 UPGRADE TO ADMIN';
+            }
+        };
+
+        window.fixAllUsers = async function() {
+            const btn = document.getElementById('fixAllBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Fixing all...';
+
+            addLog('\n═══════════════════════════════════════', 'info');
+            addLog('FIXING ALL USERS TO ADMIN', 'info');
+            addLog('═══════════════════════════════════════', 'info');
+
+            try {
+                const snapshot = await get(ref(db, 'users'));
+                
+                if (!snapshot.exists()) {
+                    addLog('No users found!', 'error');
+                    btn.disabled = false;
+                    btn.textContent = '🔧 FIX ALL USERS TO ADMIN';
+                    return;
+                }
+
+                const users = snapshot.val();
+                let fixed = 0;
+
+                for (const [uid, userData] of Object.entries(users)) {
+                    addLog(`Updating: ${userData.email}`, 'info');
+                    
+                    await update(ref(db, `users/${uid}`), {
+                        ...userData,
+                        role: 'admin',
+                        status: 'active',
+                        updatedAt: new Date().toISOString()
+                    });
+
+                    fixed++;
+                    addLog(`✅ Fixed: ${userData.email}`, 'success');
+                }
+
+                addLog('\n═══════════════════════════════════════', 'success');
+                addLog(`✅ Fixed ${fixed} user(s)! All are now admins!`, 'success');
+                addLog('═══════════════════════════════════════', 'success');
+
+                btn.textContent = `✅ FIXED ${fixed} USERS!`;
+
+            } catch (error) {
+                addLog(`❌ Error: ${error.message}`, 'error');
+                btn.disabled = false;
+                btn.textContent = '🔧 FIX ALL USERS TO ADMIN';
+            }
+        };
+
+        // Load on page load
+        loadUser();
+    </script>
+</body>
+</html>

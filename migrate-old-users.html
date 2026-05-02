@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Migrate Old Portal Users</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0a1628 0%, #1a2744 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: #1a2744;
+            border: 1px solid #2a3f6f;
+            border-radius: 12px;
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+        h1 { color: #ffffff; font-size: 28px; margin-bottom: 10px; text-align: center; }
+        .subtitle { color: #8892b0; text-align: center; margin-bottom: 30px; }
+        .info-box {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 24px;
+            color: #f59e0b;
+            line-height: 1.6;
+        }
+        .user-card {
+            background: #0a1628;
+            border: 1px solid #2a3f6f;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+        .user-card h4 { color: #ffffff; margin-bottom: 8px; }
+        .user-detail { color: #8892b0; font-size: 13px; margin-bottom: 4px; }
+        .user-detail strong { color: #ccd6f6; }
+        button {
+            width: 100%;
+            padding: 16px;
+            background: #10b981;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        button:hover { background: #059669; }
+        button:disabled { background: #4a5568; cursor: not-allowed; }
+        .log {
+            background: #0a1628;
+            border: 1px solid #2a3f6f;
+            border-radius: 8px;
+            padding: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            margin-top: 20px;
+        }
+        .log-entry { margin-bottom: 8px; padding: 8px; border-radius: 4px; }
+        .log-entry.info { color: #60a5fa; background: rgba(59, 130, 246, 0.05); }
+        .log-entry.success { color: #10b981; background: rgba(16, 185, 129, 0.1); }
+        .log-entry.error { color: #ef4444; background: rgba(239, 68, 68, 0.1); }
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            background: rgba(16, 185, 129, 0.1);
+            border: 2px solid #10b981;
+        }
+        .result h3 { color: #ffffff; margin-bottom: 10px; }
+        .result a {
+            display: inline-block;
+            margin-top: 10px;
+            color: #10b981;
+            font-weight: 700;
+            font-size: 18px;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 Migrate Old Portal Users</h1>
+        <p class="subtitle">Convert database-only users to Firebase Authentication</p>
+
+        <div class="info-box">
+            <strong>ℹ️ What this does:</strong><br>
+            Your old portal stored users in the database with password hashes. This tool will:<br>
+            1. Show all existing users from the old system<br>
+            2. Create Firebase Authentication accounts for each<br>
+            3. Set passwords to "maha2607"<br>
+            4. Activate all accounts
+        </div>
+
+        <h3 style="color: #ffffff; margin-bottom: 16px;">Existing Users in Database:</h3>
+        <div id="usersList">Loading...</div>
+
+        <button onclick="migrateAll()" id="migrateBtn">🔄 MIGRATE ALL USERS TO FIREBASE AUTH</button>
+
+        <div class="log" id="log">
+            <div class="log-entry info">Ready to migrate users...</div>
+        </div>
+
+        <div id="result"></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+        import { getAuth, createUserWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+        import { getDatabase, ref, get, update } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
+
+        const firebaseConfig = {
+            apiKey: 'AIzaSyDKthkVZLmK5Y_wT0Jmx90UEkzJs_Pz9-I',
+            authDomain: 'plot-ai-87781.firebaseapp.com',
+            databaseURL: 'https://plot-ai-87781-default-rtdb.firebaseio.com',
+            projectId: 'plot-ai-87781',
+            storageBucket: 'plot-ai-87781.firebasestorage.app',
+            messagingSenderId: '723228647195',
+            appId: '1:723228647195:web:00693e31e923014e1efdbe',
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+
+        let existingUsers = [];
+
+        function addLog(message, type = 'info') {
+            const log = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            entry.textContent = `[${timestamp}] ${message}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        // Load existing users
+        async function loadUsers() {
+            const usersList = document.getElementById('usersList');
+            
+            try {
+                const snapshot = await get(ref(db, 'users'));
+                
+                if (!snapshot.exists()) {
+                    usersList.innerHTML = '<p style="color: #8892b0;">No users found in database</p>';
+                    return;
+                }
+
+                existingUsers = [];
+                const users = snapshot.val();
+
+                for (const [uid, userData] of Object.entries(users)) {
+                    existingUsers.push({ uid, ...userData });
+                }
+
+                usersList.innerHTML = existingUsers.map(user => `
+                    <div class="user-card">
+                        <h4>${user.name || 'N/A'}</h4>
+                        <div class="user-detail"><strong>Email:</strong> ${user.email || 'N/A'}</div>
+                        <div class="user-detail"><strong>Role:</strong> ${user.role || 'user'}</div>
+                        <div class="user-detail"><strong>Status:</strong> ${user.status || 'pending'}</div>
+                        <div class="user-detail"><strong>Has Password Hash:</strong> ${user.passwordHash ? 'Yes' : 'No'}</div>
+                    </div>
+                `).join('');
+
+                addLog(`Found ${existingUsers.length} user(s) in database`, 'success');
+
+            } catch (error) {
+                usersList.innerHTML = `<p style="color: #ef4444;">Error: ${error.message}</p>`;
+                addLog(`Error loading users: ${error.message}`, 'error');
+            }
+        }
+
+        window.migrateAll = async function() {
+            const btn = document.getElementById('migrateBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Migrating...';
+
+            addLog('═══════════════════════════════════════', 'info');
+            addLog('STARTING MIGRATION', 'info');
+            addLog('═══════════════════════════════════════', 'info');
+
+            let migrated = 0;
+            let skipped = 0;
+            const password = 'maha2607';
+
+            for (const user of existingUsers) {
+                try {
+                    addLog(`\nProcessing: ${user.email}`, 'info');
+
+                    // Try to create Firebase Auth account
+                    await createUserWithEmailAndPassword(auth, user.email, password);
+                    
+                    // Update database profile
+                    await update(ref(db, `users/${user.uid}`), {
+                        status: 'active',
+                        role: user.role || 'admin',
+                        updatedAt: new Date().toISOString()
+                    });
+
+                    addLog(`✅ Migrated: ${user.email}`, 'success');
+                    migrated++;
+
+                } catch (error) {
+                    if (error.code === 'auth/email-already-in-use') {
+                        addLog(`⚠️ Already exists: ${user.email}`, 'warning');
+                        skipped++;
+                    } else {
+                        addLog(`❌ Error for ${user.email}: ${error.message}`, 'error');
+                    }
+                }
+            }
+
+            addLog('\n═══════════════════════════════════════', 'success');
+            addLog(`✅ Migration Complete!`, 'success');
+            addLog(`Migrated: ${migrated} user(s)`, 'success');
+            addLog(`Skipped: ${skipped} user(s)`, 'info');
+            addLog('═══════════════════════════════════════', 'success');
+
+            document.getElementById('result').innerHTML = `
+                <div class="result">
+                    <h3>✅ Migration Complete!</h3>
+                    <p><strong>Migrated:</strong> ${migrated} user(s)</p>
+                    <p><strong>Skipped (already existed):</strong> ${skipped} user(s)</p>
+                    <p style="margin-top: 15px;"><strong>All accounts now use password:</strong> maha2607</p>
+                    <a href="https://ai-plot-app.vercel.app/login">→ Go to Login</a>
+                </div>
+            `;
+
+            btn.textContent = '✅ MIGRATION COMPLETE';
+        };
+
+        // Load users on page load
+        loadUsers();
+    </script>
+</body>
+</html>

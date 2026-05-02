@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Login Test</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0a1628 0%, #1a2744 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: #1a2744;
+            border: 1px solid #2a3f6f;
+            border-radius: 12px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+        h1 { color: #ffffff; font-size: 28px; margin-bottom: 10px; text-align: center; }
+        .subtitle { color: #8892b0; text-align: center; margin-bottom: 30px; }
+        .form-group { margin-bottom: 20px; }
+        label {
+            display: block;
+            color: #ccd6f6;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        input {
+            width: 100%;
+            padding: 12px 16px;
+            background: #0a1628;
+            border: 1px solid #2a3f6f;
+            border-radius: 8px;
+            color: #ffffff;
+            font-size: 14px;
+            outline: none;
+        }
+        input:focus { border-color: #3b82f6; }
+        button {
+            width: 100%;
+            padding: 14px;
+            background: #3b82f6;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+        button:hover { background: #2563eb; }
+        button:disabled { background: #4a5568; cursor: not-allowed; }
+        .btn-success { background: #10b981; }
+        .btn-success:hover { background: #059669; }
+        .result {
+            margin-top: 20px;
+            padding: 16px;
+            border-radius: 8px;
+            background: #0a1628;
+            border: 1px solid #2a3f6f;
+        }
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #2a3f6f;
+        }
+        .result-item:last-child { border-bottom: none; }
+        .result-label { color: #8892b0; }
+        .result-value { color: #ccd6f6; font-weight: 600; }
+        .status-ok { color: #10b981; }
+        .status-error { color: #ef4444; }
+        .status-warning { color: #f59e0b; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Quick Login Test</h1>
+        <p class="subtitle">Test your admin credentials</p>
+
+        <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="email" value="admin@aiplot.com">
+        </div>
+
+        <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="password" value="maha2607">
+        </div>
+
+        <button onclick="testLogin()" id="testBtn">🔍 Test Login</button>
+        <button onclick="checkDatabase()" class="btn-success" id="checkBtn">📊 Check Database</button>
+
+        <div id="result"></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+        import { getAuth, signInWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+        import { getDatabase, ref, get } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
+
+        const firebaseConfig = {
+            apiKey: 'AIzaSyDKthkVZLmK5Y_wT0Jmx90UEkzJs_Pz9-I',
+            authDomain: 'plot-ai-87781.firebaseapp.com',
+            databaseURL: 'https://plot-ai-87781-default-rtdb.firebaseio.com',
+            projectId: 'plot-ai-87781',
+            storageBucket: 'plot-ai-87781.firebasestorage.app',
+            messagingSenderId: '723228647195',
+            appId: '1:723228647195:web:00693e31e923014e1efdbe',
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+
+        window.testLogin = async function() {
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const btn = document.getElementById('testBtn');
+            const resultDiv = document.getElementById('result');
+
+            btn.disabled = true;
+            btn.textContent = '⏳ Testing...';
+            resultDiv.innerHTML = '';
+
+            try {
+                // Test Firebase Auth
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+
+                // Check database profile
+                const dbSnapshot = await get(ref(db, `users/${user.uid}`));
+                
+                if (dbSnapshot.exists()) {
+                    const profile = dbSnapshot.val();
+                    
+                    resultDiv.innerHTML = `
+                        <div class="result">
+                            <div class="result-item">
+                                <span class="result-label">Firebase Auth:</span>
+                                <span class="result-value status-ok">✅ SUCCESS</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label">Database Profile:</span>
+                                <span class="result-value status-ok">✅ FOUND</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label">UID:</span>
+                                <span class="result-value">${user.uid}</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label">Email:</span>
+                                <span class="result-value">${profile.email}</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label">Name:</span>
+                                <span class="result-value">${profile.name || 'N/A'}</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label">Role:</span>
+                                <span class="result-value ${profile.role === 'admin' ? 'status-ok' : 'status-warning'}">${profile.role || 'not set'}</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label">Status:</span>
+                                <span class="result-value ${profile.status === 'active' ? 'status-ok' : 'status-error'}">${profile.status || 'not set'}</span>
+                            </div>
+                        </div>
+                        ${profile.status !== 'active' ? '<p style="color: #ef4444; margin-top: 12px;">❌ Status is not "active" - this blocks login!</p>' : ''}
+                        ${profile.role !== 'admin' ? '<p style="color: #f59e0b; margin-top: 12px;">⚠️ Role is not "admin" - limited permissions!</p>' : ''}
+                        ${profile.status === 'active' && profile.role === 'admin' ? '<p style="color: #10b981; margin-top: 12px;">✅ Account looks good! Try logging in at the app.</p>' : ''}
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="result">
+                            <div class="result-item">
+                                <span class="result-label">Firebase Auth:</span>
+                                <span class="result-value status-ok">✅ SUCCESS</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label">Database Profile:</span>
+                                <span class="result-value status-error">❌ NOT FOUND</span>
+                            </div>
+                        </div>
+                        <p style="color: #ef4444; margin-top: 12px;">❌ This is the problem! Your account exists in Firebase Auth but NOT in the database.</p>
+                    `;
+                }
+
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="result">
+                        <div class="result-item">
+                            <span class="result-label">Login Status:</span>
+                            <span class="result-value status-error">❌ FAILED</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Error:</span>
+                            <span class="result-value">${error.message}</span>
+                        </div>
+                    </div>
+                `;
+
+                if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
+                    resultDiv.innerHTML += '<p style="color: #f59e0b; margin-top: 12px;">⚠️ Wrong password or account doesn\'t exist in Firebase Auth</p>';
+                }
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔍 Test Login';
+            }
+        };
+
+        window.checkDatabase = async function() {
+            const btn = document.getElementById('checkBtn');
+            const resultDiv = document.getElementById('result');
+
+            btn.disabled = true;
+            btn.textContent = '⏳ Checking...';
+
+            try {
+                const snapshot = await get(ref(db, 'users'));
+                
+                if (!snapshot.exists()) {
+                    resultDiv.innerHTML = '<div class="result"><p class="status-error">❌ No users in database</p></div>';
+                } else {
+                    const users = snapshot.val();
+                    const userList = Object.entries(users).map(([uid, data]) => `
+                        <div class="result-item">
+                            <span class="result-label">${data.name || data.email} (${data.role})</span>
+                            <span class="result-value ${data.status === 'active' ? 'status-ok' : 'status-error'}">${data.status}</span>
+                        </div>
+                    `).join('');
+
+                    resultDiv.innerHTML = `
+                        <div class="result">
+                            <h3 style="color: #ffffff; margin-bottom: 12px;">Users in Database (${Object.keys(users).length})</h3>
+                            ${userList}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result"><p class="status-error">Error: ${error.message}</p></div>`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '📊 Check Database';
+            }
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activate All Accounts</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0a1628 0%, #1a2744 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: #1a2744;
+            border: 1px solid #2a3f6f;
+            border-radius: 12px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+        h1 {
+            color: #ffffff;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #8892b0;
+            margin-bottom: 30px;
+        }
+        .activate-btn {
+            background: #10b981;
+            color: #ffffff;
+            border: none;
+            border-radius: 12px;
+            padding: 20px 40px;
+            font-size: 20px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        .activate-btn:hover {
+            background: #059669;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(16, 185, 129, 0.3);
+        }
+        .activate-btn:disabled {
+            background: #4a5568;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .result {
+            background: #0a1628;
+            border: 1px solid #2a3f6f;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            text-align: left;
+        }
+        .result h3 {
+            color: #ffffff;
+            margin-bottom: 16px;
+        }
+        .user-item {
+            padding: 12px;
+            margin-bottom: 8px;
+            background: #1a2744;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .user-email {
+            color: #ccd6f6;
+            font-weight: 500;
+        }
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .status-badge.active {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+        .status-badge.pending {
+            background: rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
+        }
+        .login-btn {
+            background: #3b82f6;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            padding: 14px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 20px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .login-btn:hover {
+            background: #2563eb;
+        }
+        .spinner {
+            border: 4px solid #2a3f6f;
+            border-top: 4px solid #10b981;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Activate All Accounts</h1>
+        <p class="subtitle">One-click to activate all user accounts</p>
+
+        <button class="activate-btn" onclick="activateAll()" id="activateBtn">
+            ✓ ACTIVATE ALL ACCOUNTS
+        </button>
+
+        <div id="result"></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+        import { getDatabase, ref, get, update } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
+
+        const firebaseConfig = {
+            apiKey: 'AIzaSyDKthkVZLmK5Y_wT0Jmx90UEkzJs_Pz9-I',
+            authDomain: 'plot-ai-87781.firebaseapp.com',
+            databaseURL: 'https://plot-ai-87781-default-rtdb.firebaseio.com',
+            projectId: 'plot-ai-87781',
+            storageBucket: 'plot-ai-87781.firebasestorage.app',
+            messagingSenderId: '723228647195',
+            appId: '1:723228647195:web:00693e31e923014e1efdbe',
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        window.activateAll = async function() {
+            const btn = document.getElementById('activateBtn');
+            const resultDiv = document.getElementById('result');
+
+            btn.disabled = true;
+            btn.textContent = 'Activating...';
+            resultDiv.innerHTML = '<div class="spinner"></div><p style="color: #8892b0;">Activating all accounts...</p>';
+
+            try {
+                const usersRef = ref(db, 'users');
+                const snapshot = await get(usersRef);
+
+                if (!snapshot.exists()) {
+                    resultDiv.innerHTML = '<div class="result"><h3>No Users Found</h3><p style="color: #8892b0;">No user accounts exist in the database.</p></div>';
+                    btn.disabled = false;
+                    btn.textContent = '✓ ACTIVATE ALL ACCOUNTS';
+                    return;
+                }
+
+                const users = snapshot.val();
+                const updates = {};
+                const activatedUsers = [];
+
+                for (const [uid, userData] of Object.entries(users)) {
+                    // Set status to active and role to admin
+                    updates[`users/${uid}/status`] = 'active';
+                    updates[`users/${uid}/role`] = userData.role || 'admin';
+                    updates[`users/${uid}/updatedAt`] = new Date().toISOString();
+                    
+                    activatedUsers.push({
+                        email: userData.email,
+                        name: userData.name || 'N/A',
+                        role: userData.role || 'admin'
+                    });
+                }
+
+                // Apply all updates
+                await update(ref(db), updates);
+
+                // Show results
+                let html = '<div class="result"><h3>✅ Successfully Activated ' + activatedUsers.length + ' Account(s)</h3>';
+                
+                activatedUsers.forEach(user => {
+                    html += `
+                        <div class="user-item">
+                            <div>
+                                <div class="user-email">${user.name} - ${user.email}</div>
+                                <div style="color: #8892b0; font-size: 12px; margin-top: 4px;">Role: ${user.role}</div>
+                            </div>
+                            <span class="status-badge active">Active</span>
+                        </div>
+                    `;
+                });
+
+                html += `
+                    <a href="https://ai-plot-app.vercel.app/login" class="login-btn">
+                        → Go to Login Page
+                    </a>
+                </div>
+                `;
+
+                resultDiv.innerHTML = html;
+                btn.textContent = '✓ ALL ACCOUNTS ACTIVATED';
+
+            } catch (error) {
+                console.error('Error:', error);
+                resultDiv.innerHTML = `<div class="result"><p style="color: #ef4444;">Error: ${error.message}</p></div>`;
+                btn.disabled = false;
+                btn.textContent = '✓ ACTIVATE ALL ACCOUNTS';
+            }
+        };
+    </script>
+</body>
+</html>

@@ -6,6 +6,26 @@
   },
   "rewrites": [
     {
+      "source": "/direct-login.html",
+      "destination": "/direct-login.html"
+    },
+    {
+      "source": "/register.html",
+      "destination": "/register.html"
+    },
+    {
+      "source": "/verify.html",
+      "destination": "/verify.html"
+    },
+    {
+      "source": "/admin-approve.html",
+      "destination": "/admin-approve.html"
+    },
+    {
+      "source": "/login.html",
+      "destination": "/login.html"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

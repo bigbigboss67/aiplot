@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Account Setup</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0a1628 0%, #1a2744 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: #1a2744;
+            border: 1px solid #2a3f6f;
+            border-radius: 12px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+        h1 {
+            color: #ffffff;
+            font-size: 28px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        .subtitle {
+            color: #8892b0;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .step {
+            background: #0a1628;
+            border: 1px solid #2a3f6f;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+        .step h3 {
+            color: #ffffff;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .step-number {
+            background: #3b82f6;
+            color: #ffffff;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 700;
+        }
+        .form-group {
+            margin-bottom: 16px;
+        }
+        label {
+            display: block;
+            color: #ccd6f6;
+            margin-bottom: 8px;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        input {
+            width: 100%;
+            padding: 12px 16px;
+            background: #1a2744;
+            border: 1px solid #2a3f6f;
+            border-radius: 8px;
+            color: #ffffff;
+            font-size: 14px;
+            outline: none;
+        }
+        input:focus {
+            border-color: #3b82f6;
+        }
+        button {
+            width: 100%;
+            padding: 14px;
+            background: #3b82f6;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: #2563eb;
+        }
+        button:disabled {
+            background: #4a5568;
+            cursor: not-allowed;
+        }
+        .btn-success {
+            background: #10b981;
+        }
+        .btn-success:hover {
+            background: #059669;
+        }
+        .message {
+            margin-top: 16px;
+            padding: 16px;
+            border-radius: 8px;
+            display: none;
+        }
+        .message.success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #10b981;
+            display: block;
+        }
+        .message.error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+            display: block;
+        }
+        .message.info {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: #60a5fa;
+            display: block;
+        }
+        .login-link {
+            display: inline-block;
+            margin-top: 16px;
+            color: #60a5fa;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .login-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Complete Account Setup</h1>
+        <p class="subtitle">Fix login issues in 2 simple steps</p>
+
+        <!-- Step 1: Create/Verify Account -->
+        <div class="step">
+            <h3><span class="step-number">1</span> Create or Reset Account</h3>
+            <p style="color: #8892b0; margin-bottom: 16px; font-size: 14px;">
+                This will create a fresh account in both Firebase Auth and Database
+            </p>
+            
+            <form id="step1Form">
+                <div class="form-group">
+                    <label for="name">Full Name</label>
+                    <input type="text" id="name" required placeholder="Your name">
+                </div>
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" required placeholder="your@email.com">
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" required placeholder="Minimum 6 characters" minlength="6">
+                </div>
+                <button type="submit" id="step1Btn">Create Account</button>
+            </form>
+            <div id="step1Message"></div>
+        </div>
+
+        <!-- Step 2: Activate Account -->
+        <div class="step">
+            <h3><span class="step-number">2</span> Activate Your Account</h3>
+            <p style="color: #8892b0; margin-bottom: 16px; font-size: 14px;">
+                This sets your account status to "active" so you can login
+            </p>
+            
+            <form id="step2Form">
+                <div class="form-group">
+                    <label for="activateEmail">Email Address (same as above)</label>
+                    <input type="email" id="activateEmail" required placeholder="your@email.com">
+                </div>
+                <button type="submit" class="btn-success" id="step2Btn">Activate Account</button>
+            </form>
+            <div id="step2Message"></div>
+        </div>
+
+        <div style="text-align: center; margin-top: 24px;">
+            <a href="https://ai-plot-app.vercel.app/login" class="login-link">→ Go to Login Page</a>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+        import { getAuth, createUserWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+        import { getDatabase, ref, get, set, update, query, orderByChild, equalTo, get as dbGet } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
+
+        const firebaseConfig = {
+            apiKey: 'AIzaSyDKthkVZLmK5Y_wT0Jmx90UEkzJs_Pz9-I',
+            authDomain: 'plot-ai-87781.firebaseapp.com',
+            databaseURL: 'https://plot-ai-87781-default-rtdb.firebaseio.com',
+            projectId: 'plot-ai-87781',
+            storageBucket: 'plot-ai-87781.firebasestorage.app',
+            messagingSenderId: '723228647195',
+            appId: '1:723228647195:web:00693e31e923014e1efdbe',
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+
+        // Step 1: Create Account
+        document.getElementById('step1Form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const name = document.getElementById('name').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const btn = document.getElementById('step1Btn');
+            const messageDiv = document.getElementById('step1Message');
+
+            btn.disabled = true;
+            btn.textContent = 'Creating...';
+            messageDiv.className = 'message';
+
+            try {
+                // Try to create new account
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+
+                // Create user profile in database
+                await set(ref(db, `users/${user.uid}`), {
+                    name: name,
+                    email: email,
+                    role: 'admin',
+                    status: 'active',
+                    phone: '',
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                });
+
+                messageDiv.className = 'message success';
+                messageDiv.textContent = `✅ Account created successfully!\nUID: ${user.uid}\n\nNow proceed to Step 2 to ensure it's activated.`;
+                
+                // Auto-fill step 2
+                document.getElementById('activateEmail').value = email;
+
+            } catch (error) {
+                if (error.code === 'auth/email-already-in-use') {
+                    messageDiv.className = 'message info';
+                    messageDiv.textContent = `ℹ️ This email already exists in Firebase Auth.\n\nProceed to Step 2 to activate it.`;
+                    
+                    // Auto-fill step 2
+                    document.getElementById('activateEmail').value = email;
+                } else {
+                    messageDiv.className = 'message error';
+                    messageDiv.textContent = `❌ Error: ${error.message}`;
+                }
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Create Account';
+            }
+        });
+
+        // Step 2: Activate Account
+        document.getElementById('step2Form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('activateEmail').value.trim();
+            const btn = document.getElementById('step2Btn');
+            const messageDiv = document.getElementById('step2Message');
+
+            btn.disabled = true;
+            btn.textContent = 'Activating...';
+            messageDiv.className = 'message';
+
+            try {
+                // Find user by email in database
+                const usersRef = ref(db, 'users');
+                const snapshot = await dbGet(usersRef);
+
+                if (!snapshot.exists()) {
+                    messageDiv.className = 'message error';
+                    messageDiv.textContent = '❌ No users found in database. Complete Step 1 first.';
+                    btn.disabled = false;
+                    btn.textContent = 'Activate Account';
+                    return;
+                }
+
+                let userUid = null;
+                let userData = null;
+
+                for (const [uid, data] of Object.entries(snapshot.val())) {
+                    if (data.email === email) {
+                        userUid = uid;
+                        userData = data;
+                        break;
+                    }
+                }
+
+                if (!userUid) {
+                    messageDiv.className = 'message error';
+                    messageDiv.textContent = '❌ User not found in database. Complete Step 1 first.';
+                    btn.disabled = false;
+                    btn.textContent = 'Activate Account';
+                    return;
+                }
+
+                // Update user to active status
+                await update(ref(db, `users/${userUid}`), {
+                    ...userData,
+                    status: 'active',
+                    role: userData.role || 'admin',
+                    updatedAt: new Date().toISOString()
+                });
+
+                messageDiv.className = 'message success';
+                messageDiv.textContent = `✅ Account activated successfully!\n\nEmail: ${email}\nStatus: Active\nRole: ${userData.role || 'admin'}\n\nYou can now login at https://ai-plot-app.vercel.app/login`;
+
+            } catch (error) {
+                messageDiv.className = 'message error';
+                messageDiv.textContent = `❌ Error: ${error.message}`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Activate Account';
+            }
+        });
+    </script>
+</body>
+</html>

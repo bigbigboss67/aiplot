@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fix Database Profile</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0a1628 0%, #1a2744 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: #1a2744;
+            border: 1px solid #2a3f6f;
+            border-radius: 12px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+        h1 { color: #ffffff; font-size: 28px; margin-bottom: 10px; }
+        .subtitle { color: #8892b0; margin-bottom: 30px; }
+        .info-box {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 24px;
+            color: #f59e0b;
+            line-height: 1.6;
+            text-align: left;
+        }
+        button {
+            width: 100%;
+            padding: 16px;
+            background: #10b981;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        button:hover { background: #059669; }
+        button:disabled { background: #4a5568; cursor: not-allowed; }
+        .spinner {
+            border: 4px solid #2a3f6f;
+            border-top: 4px solid #10b981;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 30px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .result {
+            margin-top: 20px;
+            padding: 24px;
+            border-radius: 8px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 2px solid #10b981;
+        }
+        .result h3 { color: #ffffff; margin-bottom: 15px; }
+        .credential-box {
+            background: #0a1628;
+            border-radius: 6px;
+            padding: 16px;
+            margin: 15px 0;
+            text-align: left;
+        }
+        .credential-item {
+            color: #ccd6f6;
+            margin-bottom: 8px;
+        }
+        .credential-item strong { color: #10b981; }
+        .login-btn {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 16px 40px;
+            background: #3b82f6;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 18px;
+        }
+        .login-btn:hover { background: #2563eb; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Fix Database Profile</h1>
+        <p class="subtitle">Creating missing database profile for admin@aiplot.com</p>
+
+        <div class="info-box">
+            <strong>⚠️ Problem Found:</strong><br>
+            Your account exists in Firebase Authentication but the database profile is missing. This tool will create the database profile so you can login with full admin permissions.
+        </div>
+
+        <button onclick="fixProfile()" id="fixBtn">✓ FIX DATABASE PROFILE</button>
+
+        <div id="status">
+            <div class="spinner" style="display: none;"></div>
+            <p id="statusText" style="color: #8892b0; margin-top: 20px;"></p>
+        </div>
+
+        <div id="result"></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+        import { getAuth, signInWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+        import { getDatabase, ref, set, get } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
+
+        const firebaseConfig = {
+            apiKey: 'AIzaSyDKthkVZLmK5Y_wT0Jmx90UEkzJs_Pz9-I',
+            authDomain: 'plot-ai-87781.firebaseapp.com',
+            databaseURL: 'https://plot-ai-87781-default-rtdb.firebaseio.com',
+            projectId: 'plot-ai-87781',
+            storageBucket: 'plot-ai-87781.firebasestorage.app',
+            messagingSenderId: '723228647195',
+            appId: '1:723228647195:web:00693e31e923014e1efdbe',
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+
+        const email = 'admin@aiplot.com';
+        const password = 'maha2607';
+
+        window.fixProfile = async function() {
+            const btn = document.getElementById('fixBtn');
+            const spinner = document.querySelector('.spinner');
+            const statusText = document.getElementById('statusText');
+
+            btn.disabled = true;
+            btn.textContent = '⏳ Fixing...';
+            spinner.style.display = 'block';
+            statusText.textContent = 'Logging in to get your UID...';
+
+            try {
+                // Step 1: Login to get UID
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+                
+                statusText.textContent = `Logged in! UID: ${user.uid}`;
+                statusText.textContent = 'Creating database profile...';
+
+                // Step 2: Check if profile already exists
+                const existingProfile = await get(ref(db, `users/${user.uid}`));
+                
+                if (existingProfile.exists()) {
+                    statusText.textContent = 'Profile already exists, updating it...';
+                }
+
+                // Step 3: Create/Update admin profile
+                const adminProfile = {
+                    name: 'Admin User',
+                    email: email,
+                    role: 'admin',
+                    status: 'active',
+                    phone: '',
+                    permissions: {
+                        manageUsers: true,
+                        manageAgents: true,
+                        manageRoles: true,
+                        managePermissions: true,
+                        managePlots: true,
+                        manageCIS: true,
+                        manageLeads: true,
+                        manageDeals: true,
+                        manageActivities: true,
+                        viewReports: true,
+                        deleteRecords: true,
+                        importData: true,
+                        exportData: true,
+                        systemSettings: true
+                    },
+                    createdAt: existingProfile.exists() ? existingProfile.val().createdAt : new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                };
+
+                await set(ref(db, `users/${user.uid}`), adminProfile);
+
+                spinner.style.display = 'none';
+                statusText.textContent = '';
+
+                document.getElementById('result').innerHTML = `
+                    <div class="result">
+                        <h3>✅ Database Profile Created!</h3>
+                        <div class="credential-box">
+                            <div class="credential-item"><strong>UID:</strong> ${user.uid}</div>
+                            <div class="credential-item"><strong>Email:</strong> ${email}</div>
+                            <div class="credential-item"><strong>Name:</strong> Admin User</div>
+                            <div class="credential-item"><strong>Role:</strong> Admin</div>
+                            <div class="credential-item"><strong>Status:</strong> Active</div>
+                            <div class="credential-item"><strong>Permissions:</strong> ALL ENABLED</div>
+                        </div>
+                        <p style="color: #8892b0; margin-top: 15px;">Your account is now fully configured!</p>
+                        <a href="https://ai-plot-app.vercel.app/login" class="login-btn">
+                            → Login Now
+                        </a>
+                    </div>
+                `;
+
+                btn.textContent = '✅ FIXED!';
+
+            } catch (error) {
+                spinner.style.display = 'none';
+                statusText.textContent = '';
+                
+                document.getElementById('result').innerHTML = `
+                    <div class="result" style="background: rgba(239, 68, 68, 0.1); border-color: #ef4444;">
+                        <h3 style="color: #ef4444;">❌ Error</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+
+                btn.disabled = false;
+                btn.textContent = '✓ FIX DATABASE PROFILE';
+            }
+        };
+    </script>
+</body>
+</html>

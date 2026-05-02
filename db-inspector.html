@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Inspector</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a1628;
+            color: #ccd6f6;
+            padding: 20px;
+        }
+        h1 { color: #ffffff; margin-bottom: 20px; text-align: center; }
+        .user-block {
+            background: #1a2744;
+            border: 1px solid #2a3f6f;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+        .user-block h3 { color: #10b981; margin-bottom: 12px; }
+        .field {
+            margin-bottom: 8px;
+            padding: 8px;
+            background: #0a1628;
+            border-radius: 4px;
+        }
+        .field-label { color: #8892b0; font-size: 12px; }
+        .field-value { color: #ffffff; font-weight: 600; }
+        .role-agent { color: #f59e0b; }
+        .role-admin { color: #10b981; }
+        .status-active { color: #10b981; }
+        .status-pending { color: #ef4444; }
+        button {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            background: #10b981;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 20px 0;
+        }
+        button:hover { background: #059669; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Database Inspector</h1>
+    <div id="content">Loading...</div>
+    <button onclick="fixAllToAdmin()">⚡ FIX ALL TO ADMIN</button>
+    <div id="result"></div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+        import { getDatabase, ref, get, set } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
+
+        const firebaseConfig = {
+            apiKey: 'AIzaSyDKthkVZLmK5Y_wT0Jmx90UEkzJs_Pz9-I',
+            authDomain: 'plot-ai-87781.firebaseapp.com',
+            databaseURL: 'https://plot-ai-87781-default-rtdb.firebaseio.com',
+            projectId: 'plot-ai-87781',
+            storageBucket: 'plot-ai-87781.firebasestorage.app',
+            messagingSenderId: '723228647195',
+            appId: '1:723228647195:web:00693e31e923014e1efdbe',
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        let allUsers = {};
+
+        async function loadUsers() {
+            const content = document.getElementById('content');
+            
+            try {
+                const snapshot = await get(ref(db, 'users'));
+                
+                if (!snapshot.exists()) {
+                    content.innerHTML = '<p style="text-align:center;">No users found</p>';
+                    return;
+                }
+
+                allUsers = snapshot.val();
+                let html = '';
+
+                for (const [uid, userData] of Object.entries(allUsers)) {
+                    const roleClass = userData.role === 'admin' ? 'role-admin' : 'role-agent';
+                    const statusClass = userData.status === 'active' ? 'status-active' : 'status-pending';
+                    
+                    html += `
+                        <div class="user-block">
+                            <h3>${userData.name || 'N/A'} (${userData.email})</h3>
+                            <div class="field">
+                                <div class="field-label">UID</div>
+                                <div class="field-value" style="font-size:11px;">${uid}</div>
+                            </div>
+                            <div class="field">
+                                <div class="field-label">Email</div>
+                                <div class="field-value">${userData.email}</div>
+                            </div>
+                            <div class="field">
+                                <div class="field-label">Role</div>
+                                <div class="field-value ${roleClass}">${userData.role || 'NOT SET'}</div>
+                            </div>
+                            <div class="field">
+                                <div class="field-label">Status</div>
+                                <div class="field-value ${statusClass}">${userData.status || 'NOT SET'}</div>
+                            </div>
+                            <div class="field">
+                                <div class="field-label">Permissions</div>
+                                <div class="field-value" style="font-size:11px;">${userData.permissions ? JSON.stringify(userData.permissions, null, 2) : 'NONE'}</div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                content.innerHTML = html;
+
+            } catch (error) {
+                content.innerHTML = `<p style="color:#ef4444;">Error: ${error.message}</p>`;
+            }
+        }
+
+        window.fixAllToAdmin = async function() {
+            const result = document.getElementById('result');
+            result.innerHTML = '<p>Fixing...</p>';
+
+            try {
+                for (const [uid, userData] of Object.entries(allUsers)) {
+                    await set(ref(db, `users/${uid}`), {
+                        name: userData.name || 'Admin',
+                        email: userData.email,
+                        role: 'admin',
+                        status: 'active',
+                        phone: userData.phone || '',
+                        permissions: {
+                            manageUsers: true,
+                            manageAgents: true,
+                            manageRoles: true,
+                            managePermissions: true,
+                            managePlots: true,
+                            manageCIS: true,
+                            manageLeads: true,
+                            manageDeals: true,
+                            manageActivities: true,
+                            viewReports: true,
+                            deleteRecords: true,
+                            importData: true,
+                            exportData: true,
+                            systemSettings: true
+                        },
+                        createdAt: userData.createdAt || new Date().toISOString(),
+                        updatedAt: new Date().toISOString()
+                    });
+                }
+
+                result.innerHTML = `
+                    <div style="background: rgba(16,185,129,0.1); border: 2px solid #10b981; border-radius: 8px; padding: 20px; margin-top: 20px;">
+                        <h3 style="color: #10b981;">✅ All users fixed to ADMIN!</h3>
+                        <p>Now:</p>
+                        <ol style="margin: 10px 0 10px 20px; line-height: 2;">
+                            <li>Close ALL tabs of the app</li>
+                            <li>Open the clear-storage.html tool</li>
+                            <li>Click "Clear Storage & Open App"</li>
+                            <li>Login again</li>
+                            <li>You should be ADMIN now!</li>
+                        </ol>
+                    </div>
+                `;
+
+                // Reload to show updated data
+                setTimeout(() => location.reload(), 2000);
+
+            } catch (error) {
+                result.innerHTML = `<p style="color:#ef4444;">Error: ${error.message}</p>`;
+            }
+        };
+
+        loadUsers();
+    </script>
+</body>
+</html>

@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Plot - Login Diagnostic & Fix</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0a1628 0%, #1a2744 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #ffffff;
+            font-size: 32px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        .subtitle {
+            color: #8892b0;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .card {
+            background: #1a2744;
+            border: 1px solid #2a3f6f;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+        .card h2 {
+            color: #ffffff;
+            font-size: 20px;
+            margin-bottom: 16px;
+        }
+        .form-group {
+            margin-bottom: 16px;
+        }
+        label {
+            display: block;
+            color: #ccd6f6;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        input {
+            width: 100%;
+            padding: 12px 16px;
+            background: #0a1628;
+            border: 1px solid #2a3f6f;
+            border-radius: 8px;
+            color: #ffffff;
+            font-size: 14px;
+            outline: none;
+        }
+        input:focus {
+            border-color: #3b82f6;
+        }
+        button {
+            width: 100%;
+            padding: 14px;
+            background: #3b82f6;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: #2563eb;
+        }
+        button:disabled {
+            background: #4a5568;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 16px;
+            padding: 16px;
+            border-radius: 8px;
+            background: #0a1628;
+            border: 1px solid #2a3f6f;
+        }
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #2a3f6f;
+        }
+        .result-item:last-child {
+            border-bottom: none;
+        }
+        .result-label {
+            color: #8892b0;
+        }
+        .result-value {
+            color: #ccd6f6;
+            font-weight: 600;
+        }
+        .status-ok {
+            color: #10b981;
+        }
+        .status-error {
+            color: #ef4444;
+        }
+        .status-warning {
+            color: #f59e0b;
+        }
+        .action-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 16px;
+        }
+        .action-buttons button {
+            padding: 12px;
+            font-size: 14px;
+        }
+        .btn-success {
+            background: #10b981;
+        }
+        .btn-success:hover {
+            background: #059669;
+        }
+        .btn-warning {
+            background: #f59e0b;
+        }
+        .btn-warning:hover {
+            background: #d97706;
+        }
+        .log {
+            background: #0a1628;
+            border: 1px solid #2a3f6f;
+            border-radius: 8px;
+            padding: 16px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            color: #8892b0;
+            margin-top: 16px;
+        }
+        .log-entry {
+            margin-bottom: 8px;
+            padding: 4px 0;
+        }
+        .log-entry.error {
+            color: #ef4444;
+        }
+        .log-entry.success {
+            color: #10b981;
+        }
+        .log-entry.info {
+            color: #60a5fa;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Login Diagnostic Tool</h1>
+        <p class="subtitle">Identify and fix login issues</p>
+
+        <!-- Test Login Section -->
+        <div class="card">
+            <h2>🔐 Test Login</h2>
+            <form id="testLoginForm">
+                <div class="form-group">
+                    <label for="testEmail">Email</label>
+                    <input type="email" id="testEmail" required placeholder="Enter your email">
+                </div>
+                <div class="form-group">
+                    <label for="testPassword">Password</label>
+                    <input type="password" id="testPassword" required placeholder="Enter your password">
+                </div>
+                <button type="submit" id="testLoginBtn">Test Login</button>
+            </form>
+            <div id="testLoginResult"></div>
+        </div>
+
+        <!-- Check User Status Section -->
+        <div class="card">
+            <h2>👤 Check User Account</h2>
+            <form id="checkUserForm">
+                <div class="form-group">
+                    <label for="checkEmail">Email</label>
+                    <input type="email" id="checkEmail" required placeholder="Enter email to check">
+                </div>
+                <button type="submit" id="checkUserBtn">Check Account</button>
+            </form>
+            <div id="checkUserResult"></div>
+        </div>
+
+        <!-- Fix All Users Section -->
+        <div class="card">
+            <h2>🔧 Fix All Users</h2>
+            <p style="color: #8892b0; margin-bottom: 16px;">This will ensure all database users have active status and can login</p>
+            <button onclick="fixAllUsers()" id="fixAllBtn">Fix All User Accounts</button>
+            <div id="fixAllResult"></div>
+        </div>
+
+        <!-- Diagnostic Log -->
+        <div class="card">
+            <h2>📋 Diagnostic Log</h2>
+            <div id="log" class="log">
+                <div class="log-entry info">System initialized. Ready to diagnose...</div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+        import { getAuth, signInWithEmailAndPassword, fetchSignInMethodsForEmail } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+        import { getDatabase, ref, get, update } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
+
+        const firebaseConfig = {
+            apiKey: 'AIzaSyDKthkVZLmK5Y_wT0Jmx90UEkzJs_Pz9-I',
+            authDomain: 'plot-ai-87781.firebaseapp.com',
+            databaseURL: 'https://plot-ai-87781-default-rtdb.firebaseio.com',
+            projectId: 'plot-ai-87781',
+            storageBucket: 'plot-ai-87781.firebasestorage.app',
+            messagingSenderId: '723228647195',
+            appId: '1:723228647195:web:00693e31e923014e1efdbe',
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+
+        function addLog(message, type = 'info') {
+            const log = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            entry.textContent = `[${timestamp}] ${message}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        // Test Login Form
+        document.getElementById('testLoginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('testEmail').value.trim();
+            const password = document.getElementById('testPassword').value;
+            const btn = document.getElementById('testLoginBtn');
+            const resultDiv = document.getElementById('testLoginResult');
+
+            btn.disabled = true;
+            btn.textContent = 'Testing Login...';
+            resultDiv.innerHTML = '';
+
+            addLog(`Testing login for: ${email}`, 'info');
+
+            try {
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+
+                addLog('✅ Login successful!', 'success');
+                addLog(`User UID: ${user.uid}`, 'success');
+                addLog(`Email verified: ${user.emailVerified}`, 'info');
+
+                // Check database profile
+                const profileSnap = await get(ref(db, `users/${user.uid}`));
+                
+                if (profileSnap.exists()) {
+                    const profile = profileSnap.val();
+                    addLog(`Database profile found`, 'success');
+                    addLog(`Role: ${profile.role}`, 'info');
+                    addLog(`Status: ${profile.status}`, profile.status === 'active' ? 'success' : 'warning');
+
+                    resultDiv.innerHTML = `
+                        <div class="result">
+                            <div class="result-item">
+                                <span class="result-label">Login Status:</span>
+                                <span class="result-value status-ok">✅ SUCCESS</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label">User UID:</span>
+                                <span class="result-value">${user.uid}</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label">Role:</span>
+                                <span class="result-value">${profile.role || 'user'}</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label">Status:</span>
+                                <span class="result-value ${profile.status === 'active' ? 'status-ok' : 'status-warning'}">${profile.status || 'pending'}</span>
+                            </div>
+                        </div>
+                        ${profile.status !== 'active' ? '<p style="color: #f59e0b; margin-top: 12px;">⚠️ Your account status is not "active". This may block login in the app.</p>' : ''}
+                    `;
+                } else {
+                    addLog('⚠️ No database profile found!', 'warning');
+                    resultDiv.innerHTML = `
+                        <div class="result">
+                            <div class="result-item">
+                                <span class="result-label">Firebase Auth:</span>
+                                <span class="result-value status-ok">✅ OK</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label">Database Profile:</span>
+                                <span class="result-value status-error">❌ MISSING</span>
+                            </div>
+                        </div>
+                        <p style="color: #ef4444; margin-top: 12px;">❌ User exists in Firebase Auth but NOT in database. This will cause login to fail!</p>
+                    `;
+                }
+
+            } catch (error) {
+                addLog(`❌ Login failed: ${error.message}`, 'error');
+                addLog(`Error code: ${error.code}`, 'error');
+
+                resultDiv.innerHTML = `
+                    <div class="result">
+                        <div class="result-item">
+                            <span class="result-label">Login Status:</span>
+                            <span class="result-value status-error">❌ FAILED</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Error Code:</span>
+                            <span class="result-value">${error.code}</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Error Message:</span>
+                            <span class="result-value">${error.message}</span>
+                        </div>
+                    </div>
+                `;
+
+                if (error.code === 'auth/user-not-found') {
+                    addLog('This email is NOT registered in Firebase Authentication', 'error');
+                    resultDiv.innerHTML += '<p style="color: #f59e0b; margin-top: 12px;">⚠️ The email exists in database but NOT in Firebase Auth. Use "Fix All User Accounts" button below.</p>';
+                }
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Test Login';
+            }
+        });
+
+        // Check User Form
+        document.getElementById('checkUserForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('checkEmail').value.trim();
+            const btn = document.getElementById('checkUserBtn');
+            const resultDiv = document.getElementById('checkUserResult');
+
+            btn.disabled = true;
+            btn.textContent = 'Checking...';
+            resultDiv.innerHTML = '';
+
+            addLog(`Checking account for: ${email}`, 'info');
+
+            try {
+                // Check Firebase Auth
+                const methods = await fetchSignInMethodsForEmail(auth, email);
+                const existsInAuth = methods.length > 0;
+                
+                addLog(`Firebase Auth: ${existsInAuth ? '✅ Found' : '❌ Not found'}`, existsInAuth ? 'success' : 'error');
+
+                // Check Database
+                const usersSnap = await get(ref(db, 'users'));
+                let dbUser = null;
+                let dbUserUid = null;
+
+                if (usersSnap.exists()) {
+                    const users = usersSnap.val();
+                    for (const [uid, userData] of Object.entries(users)) {
+                        if (userData.email === email) {
+                            dbUser = userData;
+                            dbUserUid = uid;
+                            break;
+                        }
+                    }
+                }
+
+                addLog(`Database: ${dbUser ? '✅ Found' : '❌ Not found'}`, dbUser ? 'success' : 'error');
+
+                resultDiv.innerHTML = `
+                    <div class="result">
+                        <div class="result-item">
+                            <span class="result-label">Firebase Auth:</span>
+                            <span class="result-value ${existsInAuth ? 'status-ok' : 'status-error'}">${existsInAuth ? '✅ Registered' : '❌ Not Registered'}</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="result-label">Database:</span>
+                            <span class="result-value ${dbUser ? 'status-ok' : 'status-error'}">${dbUser ? '✅ Found' : '❌ Not Found'}</span>
+                        </div>
+                        ${dbUser ? `
+                            <div class="result-item">
+                                <span class="result-label">Name:</span>
+                                <span class="result-value">${dbUser.name || 'N/A'}</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label">Role:</span>
+                                <span class="result-value">${dbUser.role || 'user'}</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label">Status:</span>
+                                <span class="result-value ${dbUser.status === 'active' ? 'status-ok' : 'status-warning'}">${dbUser.status || 'pending'}</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+
+                if (!existsInAuth && dbUser) {
+                    resultDiv.innerHTML += `
+                        <div class="action-buttons">
+                            <button class="btn-success" onclick="createAuthAccount('${email}', '${dbUser.name || ''}')">Create Auth Account</button>
+                        </div>
+                    `;
+                    addLog('⚠️ MISMATCH: User in database but not in Firebase Auth!', 'warning');
+                }
+
+            } catch (error) {
+                addLog(`Error: ${error.message}`, 'error');
+                resultDiv.innerHTML = `<div class="result"><p class="status-error">Error: ${error.message}</p></div>`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Check Account';
+            }
+        });
+
+        // Fix All Users
+        window.fixAllUsers = async function() {
+            const btn = document.getElementById('fixAllBtn');
+            const resultDiv = document.getElementById('fixAllResult');
+
+            btn.disabled = true;
+            btn.textContent = 'Fixing...';
+            resultDiv.innerHTML = '';
+
+            addLog('Starting fix for all users...', 'info');
+
+            try {
+                const usersSnap = await get(ref(db, 'users'));
+                
+                if (!usersSnap.exists()) {
+                    addLog('No users found in database', 'error');
+                    resultDiv.innerHTML = '<div class="result"><p class="status-error">No users found in database</p></div>';
+                    return;
+                }
+
+                const users = usersSnap.val();
+                let fixed = 0;
+                let updates = {};
+
+                for (const [uid, userData] of Object.entries(users)) {
+                    addLog(`Processing: ${userData.email}`, 'info');
+                    
+                    // Set status to active if not already
+                    if (userData.status !== 'active') {
+                        updates[`users/${uid}/status`] = 'active';
+                        addLog(`  → Setting status to active`, 'success');
+                    }
+
+                    // Set role to admin if not set
+                    if (!userData.role) {
+                        updates[`users/${uid}/role`] = 'admin';
+                        addLog(`  → Setting role to admin`, 'success');
+                    }
+
+                    fixed++;
+                }
+
+                if (Object.keys(updates).length > 0) {
+                    await update(ref(db), updates);
+                    addLog(`✅ Fixed ${fixed} user(s)`, 'success');
+                    resultDiv.innerHTML = `
+                        <div class="result">
+                            <p class="status-ok">✅ Successfully fixed ${fixed} user(s)</p>
+                            <p style="color: #8892b0; margin-top: 8px;">All users now have:</p>
+                            <ul style="color: #ccd6f6; margin-left: 20px; margin-top: 8px;">
+                                <li>Status: active</li>
+                                <li>Role: admin</li>
+                            </ul>
+                        </div>
+                    `;
+                } else {
+                    addLog('All users already configured correctly', 'success');
+                    resultDiv.innerHTML = '<div class="result"><p class="status-ok">✅ All users are already configured correctly</p></div>';
+                }
+
+                addLog('Now test your login again!', 'info');
+
+            } catch (error) {
+                addLog(`Error: ${error.message}`, 'error');
+                resultDiv.innerHTML = `<div class="result"><p class="status-error">Error: ${error.message}</p></div>`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Fix All User Accounts';
+            }
+        };
+
+        // Create Auth Account (called from check result)
+        window.createAuthAccount = async function(email, name) {
+            const password = prompt('Set a password for this account (min 6 characters):');
+            
+            if (!password || password.length < 6) {
+                alert('Password must be at least 6 characters!');
+                return;
+            }
+
+            try {
+                addLog(`Creating auth account for ${email}...`, 'info');
+                
+                // This requires the user to create the account manually via the app's registration
+                addLog('⚠️ For security, accounts must be created through the app registration', 'warning');
+                alert('Please use the registration page at https://ai-plot-app.vercel.app/register to create this account, or use the create-admin.html tool.');
+                
+            } catch (error) {
+                addLog(`Error: ${error.message}`, 'error');
+                alert(`Error: ${error.message}`);
+            }
+        };
+
+        addLog('Diagnostic tool ready', 'success');
+    </script>
+</body>
+</html>

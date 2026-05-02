@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fix UID Mismatch</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0a1628 0%, #1a2744 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: #1a2744;
+            border: 1px solid #2a3f6f;
+            border-radius: 12px;
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+        h1 {
+            color: #ffffff;
+            font-size: 28px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        .subtitle {
+            color: #8892b0;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .section {
+            background: #0a1628;
+            border: 1px solid #2a3f6f;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .section h2 {
+            color: #ffffff;
+            font-size: 18px;
+            margin-bottom: 16px;
+        }
+        .user-card {
+            background: #1a2744;
+            border: 1px solid #2a3f6f;
+            border-radius: 6px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+        .user-card h4 {
+            color: #ccd6f6;
+            margin-bottom: 8px;
+        }
+        .user-detail {
+            color: #8892b0;
+            font-size: 13px;
+            margin-bottom: 4px;
+            word-break: break-all;
+        }
+        .user-detail strong {
+            color: #ccd6f6;
+        }
+        button {
+            width: 100%;
+            padding: 14px;
+            background: #3b82f6;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-bottom: 12px;
+        }
+        button:hover {
+            background: #2563eb;
+        }
+        button:disabled {
+            background: #4a5568;
+            cursor: not-allowed;
+        }
+        .btn-success {
+            background: #10b981;
+        }
+        .btn-success:hover {
+            background: #059669;
+        }
+        .btn-warning {
+            background: #f59e0b;
+            color: #000000;
+        }
+        .btn-warning:hover {
+            background: #d97706;
+        }
+        .message {
+            margin-top: 16px;
+            padding: 16px;
+            border-radius: 8px;
+        }
+        .message.success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #10b981;
+        }
+        .message.error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+        }
+        .message.info {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: #60a5fa;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #8892b0;
+        }
+        .spinner {
+            border: 3px solid #2a3f6f;
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .sync-btn {
+            margin-top: 8px;
+            padding: 8px 16px;
+            font-size: 14px;
+            width: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Fix UID Mismatch</h1>
+        <p class="subtitle">Compare Firebase Auth and Database users</p>
+
+        <div id="loadingSection" class="loading">
+            <div class="spinner"></div>
+            <p>Loading user data...</p>
+        </div>
+
+        <div id="contentSection" style="display: none;">
+            <!-- Firebase Auth Users -->
+            <div class="section">
+                <h2>📊 Database Users</h2>
+                <div id="dbUsersList"></div>
+            </div>
+
+            <!-- Sync All -->
+            <div class="section">
+                <h2>🔧 Fix & Activate All</h2>
+                <p style="color: #8892b0; margin-bottom: 16px;">This will ensure all database users have active status and admin role</p>
+                <button class="btn-success" onclick="activateAllInDB()">✓ Activate All Database Users</button>
+                <div id="syncMessage"></div>
+            </div>
+
+            <!-- Login Link -->
+            <div style="text-align: center; margin-top: 20px;">
+                <a href="https://ai-plot-app.vercel.app/login" style="color: #60a5fa; font-weight: 600; text-decoration: none;">
+                    → Go to Login Page
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+        import { getDatabase, ref, get, update } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
+
+        const firebaseConfig = {
+            apiKey: 'AIzaSyDKthkVZLmK5Y_wT0Jmx90UEkzJs_Pz9-I',
+            authDomain: 'plot-ai-87781.firebaseapp.com',
+            databaseURL: 'https://plot-ai-87781-default-rtdb.firebaseio.com',
+            projectId: 'plot-ai-87781',
+            storageBucket: 'plot-ai-87781.firebasestorage.app',
+            messagingSenderId: '723228647195',
+            appId: '1:723228647195:web:00693e31e923014e1efdbe',
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        let dbUsers = [];
+
+        async function loadUsers() {
+            const loadingSection = document.getElementById('loadingSection');
+            const contentSection = document.getElementById('contentSection');
+
+            try {
+                // Load database users
+                const dbSnapshot = await get(ref(db, 'users'));
+                
+                if (dbSnapshot.exists()) {
+                    const users = dbSnapshot.val();
+                    dbUsers = Object.entries(users).map(([uid, data]) => ({
+                        uid,
+                        ...data
+                    }));
+                }
+
+                // Display database users
+                const dbUsersList = document.getElementById('dbUsersList');
+                
+                if (dbUsers.length === 0) {
+                    dbUsersList.innerHTML = '<p style="color: #8892b0;">No users found in database</p>';
+                } else {
+                    dbUsersList.innerHTML = dbUsers.map(user => `
+                        <div class="user-card">
+                            <h4>${user.name || 'N/A'}</h4>
+                            <div class="user-detail"><strong>Email:</strong> ${user.email || 'N/A'}</div>
+                            <div class="user-detail"><strong>UID:</strong> ${user.uid}</div>
+                            <div class="user-detail"><strong>Role:</strong> ${user.role || 'not set'}</div>
+                            <div class="user-detail"><strong>Status:</strong> ${user.status || 'not set'}</div>
+                            <div class="user-detail"><strong>Created:</strong> ${user.createdAt || 'N/A'}</div>
+                        </div>
+                    `).join('');
+                }
+
+                loadingSection.style.display = 'none';
+                contentSection.style.display = 'block';
+
+            } catch (error) {
+                loadingSection.innerHTML = `<p style="color: #ef4444;">Error: ${error.message}</p>`;
+            }
+        }
+
+        window.activateAllInDB = async function() {
+            const messageDiv = document.getElementById('syncMessage');
+            
+            if (dbUsers.length === 0) {
+                messageDiv.className = 'message error';
+                messageDiv.textContent = 'No users found in database to activate.';
+                return;
+            }
+
+            messageDiv.className = 'message info';
+            messageDiv.textContent = 'Activating all users...';
+
+            try {
+                const updates = {};
+                
+                dbUsers.forEach(user => {
+                    updates[`users/${user.uid}/status`] = 'active';
+                    updates[`users/${user.uid}/role`] = user.role || 'admin';
+                    updates[`users/${user.uid}/updatedAt`] = new Date().toISOString();
+                });
+
+                await update(ref(db), updates);
+
+                messageDiv.className = 'message success';
+                messageDiv.textContent = `✅ Successfully activated ${dbUsers.length} user(s)!\n\nAll users now have:\n- Status: active\n- Role: admin\n\nYou can now login with any of these accounts.`;
+
+                // Reload to show updated data
+                setTimeout(() => loadUsers(), 1000);
+
+            } catch (error) {
+                messageDiv.className = 'message error';
+                messageDiv.textContent = `❌ Error: ${error.message}`;
+            }
+        };
+
+        // Load on page load
+        loadUsers();
+    </script>
+</body>
+</html>
