@@ -3,106 +3,423 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI-Plot - Dashboard</title>
+    <title>AI Plot Platform</title>
+    <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
+    <!-- PapaParse for CSV -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js" defer></script>
-    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f8f9fa;
+        }
+        /* Login card (initially visible) */
+        #login-section {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-card {
+            max-width: 450px;
+            width: 100%;
+            border-radius: 1rem;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+        /* Dashboard (hidden by default) */
+        #dashboard-section {
+            display: none;
+        }
+    </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="#">📊 AI-Plot</a>
-            <div class="d-flex">
-                <span class="navbar-text me-3" id="user-display"></span>
-                <button class="btn btn-outline-light btn-sm logout-btn">Logout</button>
+    <!-- ================== LOGIN SECTION ================== -->
+    <div id="login-section">
+        <div class="card login-card p-4">
+            <div class="text-center mb-4">
+                <i class="fas fa-building fa-3x text-primary"></i>
+                <h2 class="mt-2">AI Real Estate</h2>
+                <p class="text-muted">Sign in to your account</p>
             </div>
+            <div id="alert-box" class="alert" role="alert" style="display: none;"></div>
+            <form id="login-form">
+                <div class="mb-3">
+                    <label for="email" class="form-label">Email address</label>
+                    <input type="email" class="form-control" id="email" placeholder="name@example.com" required>
+                </div>
+                <div class="mb-3">
+                    <label for="password" class="form-label">Password</label>
+                    <input type="password" class="form-control" id="password" placeholder="••••••••" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100 mb-3">
+                    <i class="fas fa-sign-in-alt"></i> Sign In
+                </button>
+                <button type="button" class="btn btn-outline-secondary w-100 mb-3" id="guest-btn">
+                    <i class="fas fa-user-friends"></i> Continue as Guest
+                </button>
+                <div class="text-center">
+                    <p class="text-muted">Demo: <strong>admin@aiplot.com</strong> / <strong>admin123</strong></p>
+                </div>
+            </form>
         </div>
-    </nav>
+    </div>
 
-    <div class="container mt-4">
-        <div class="row mb-4">
-            <div class="col-md-4">
-                <div class="card text-bg-primary">
-                    <div class="card-body">
-                        <h5 class="card-title">Plots</h5>
-                        <p class="card-text display-6" id="plot-count">0</p>
+    <!-- ================== DASHBOARD SECTION ================== -->
+    <div id="dashboard-section">
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="#">📊 AI-Plot</a>
+                <div class="d-flex">
+                    <span class="navbar-text me-3" id="user-display"></span>
+                    <button class="btn btn-outline-light btn-sm" id="logout-btn">Logout</button>
+                </div>
+            </div>
+        </nav>
+        <div class="container mt-4">
+            <div class="row mb-4">
+                <div class="col-md-4"><div class="card text-bg-primary"><div class="card-body"><h5>Plots</h5><p class="display-6" id="plot-count">0</p></div></div></div>
+                <div class="col-md-4"><div class="card text-bg-success"><div class="card-body"><h5>Leads</h5><p class="display-6" id="lead-count">0</p></div></div></div>
+                <div class="col-md-4"><div class="card text-bg-warning"><div class="card-body"><h5>Deals</h5><p class="display-6" id="deal-count">0</p></div></div></div>
+            </div>
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Your Plots</h5>
+                    <div>
+                        <button class="btn btn-primary btn-sm" id="import-btn"><i class="bi bi-upload"></i> Import CSV/JSON</button>
+                        <input type="file" id="import-file-input" accept=".csv,.json" style="display: none;">
                     </div>
                 </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card text-bg-success">
-                    <div class="card-body">
-                        <h5 class="card-title">Leads</h5>
-                        <p class="card-text display-6" id="lead-count">0</p>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped" id="plots-table">
+                            <thead><tr><th>Title</th><th>Type</th><th>Created</th><th>Action</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
                     </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card text-bg-warning">
-                    <div class="card-body">
-                        <h5 class="card-title">Deals</h5>
-                        <p class="card-text display-6" id="deal-count">0</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="card mb-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Your Plots</h5>
-                <div>
-                    <button class="btn btn-primary btn-sm" id="import-file-btn">
-                        <i class="bi bi-upload"></i> Import CSV/JSON
-                    </button>
-                    <input type="file" id="import-file-input" accept=".csv,.json" style="display: none;">
-                </div>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-striped" id="plots-table">
-                        <thead>
-                            <tr>
-                                <th>Title</th>
-                                <th>Type</th>
-                                <th>Created</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Plot detail modal -->
     <div class="modal fade" id="plot-detail-modal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title"></h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
+                <div class="modal-header"><h5 class="modal-title"></h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
                 <div class="modal-body"></div>
             </div>
         </div>
     </div>
-
     <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toast-container"></div>
 
+    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="app.js"></script>
-    <script src="plot-import.js"></script>
+    <!-- Font Awesome -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const session = localStorage.getItem('aiplot_session') || sessionStorage.getItem('aiplot_session');
-            if (!session) {
-                window.location.href = 'login.html';
+        // ================== GLOBAL DATA STORE ==================
+        const DataStore = {
+            cis: [],
+            leads: [],
+            deals: [],
+            plots: [],
+            activities: [],
+            addPlot(plotData) {
+                if (!plotData.id) plotData.id = 'plot-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+                this.plots.push(plotData);
+                this.save();
+                refreshUI();
+            },
+            init() {
+                const saved = localStorage.getItem('aiplot_data');
+                if (saved) {
+                    try {
+                        const data = JSON.parse(saved);
+                        this.cis = data.cis || [];
+                        this.leads = data.leads || [];
+                        this.deals = data.deals || [];
+                        this.plots = data.plots || [];
+                        this.activities = data.activities || [];
+                    } catch (e) { this.seedDemoData(); }
+                } else {
+                    this.seedDemoData();
+                }
+            },
+            save() {
+                localStorage.setItem('aiplot_data', JSON.stringify({
+                    cis: this.cis, leads: this.leads, deals: this.deals,
+                    plots: this.plots, activities: this.activities
+                }));
+            },
+            seedDemoData() {
+                this.cis = [{ id: 'ci-1', name: 'Acme Corp' }, { id: 'ci-2', name: 'Globex Inc' }];
+                this.leads = [{ id: 'ld-1', name: 'Alice' }, { id: 'ld-2', name: 'Bob' }];
+                this.deals = [{ id: 'dl-1', title: 'Deal 1' }];
+                this.plots = [{
+                    id: 'plot-1', title: 'Sample Plot', plotType: 'scatter',
+                    dataPoints: [{ x: 1, y: 10 }, { x: 2, y: 20 }],
+                    created: new Date().toISOString()
+                }];
+                this.activities = [{ id: 'act-1', type: 'Call', description: 'Demo' }];
+                this.save();
+            }
+        };
+
+        // ================== UI HELPERS ==================
+        function refreshUI() {
+            // Refresh plots table
+            const tbody = document.querySelector('#plots-table tbody');
+            if (tbody) {
+                tbody.innerHTML = DataStore.plots.map(p => `
+                    <tr>
+                        <td>${p.title}</td>
+                        <td>${p.plotType || 'scatter'}</td>
+                        <td>${p.created ? new Date(p.created).toLocaleDateString() : ''}</td>
+                        <td><button class="btn btn-sm btn-outline-primary view-plot" data-id="${p.id}"><i class="bi bi-eye"></i> View</button></td>
+                    </tr>
+                `).join('');
+                tbody.querySelectorAll('.view-plot').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const id = e.currentTarget.dataset.id;
+                        const plot = DataStore.plots.find(p => p.id === id);
+                        if (plot) showPlotDetail(plot);
+                    });
+                });
+            }
+            // Counts
+            const pc = document.getElementById('plot-count'); if (pc) pc.textContent = DataStore.plots.length;
+            const lc = document.getElementById('lead-count'); if (lc) lc.textContent = DataStore.leads.length;
+            const dc = document.getElementById('deal-count'); if (dc) dc.textContent = DataStore.deals.length;
+        }
+
+        function showPlotDetail(plot) {
+            const modal = document.getElementById('plot-detail-modal');
+            if (!modal) return;
+            modal.querySelector('.modal-title').textContent = plot.title;
+            modal.querySelector('.modal-body').innerHTML = `
+                <p>${plot.description || ''}</p>
+                <canvas id="plot-canvas" width="400" height="300"></canvas>
+            `;
+            const bsModal = new bootstrap.Modal(modal);
+            bsModal.show();
+            modal.addEventListener('shown.bs.modal', () => {
+                if (plot.dataPoints && plot.dataPoints.length) {
+                    const ctx = document.getElementById('plot-canvas').getContext('2d');
+                    new Chart(ctx, {
+                        type: plot.plotType || 'scatter',
+                        data: { datasets: [{ label: plot.title, data: plot.dataPoints.map(p => ({ x: p.x, y: p.y })) }] },
+                        options: { scales: { x: { type: 'linear', position: 'bottom' } } }
+                    });
+                }
+            }, { once: true });
+        }
+
+        function showToast(message, type) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast align-items-center text-bg-${type} border-0`;
+            toast.innerHTML = `<div class="d-flex"><div class="toast-body">${message}</div><button class="btn-close me-2 m-auto" data-bs-dismiss="toast"></button></div>`;
+            container.appendChild(toast);
+            new bootstrap.Toast(toast).show();
+        }
+
+        // ================== AUTHENTICATION (NO REDIRECTS) ==================
+        function showDashboard(user) {
+            document.getElementById('login-section').style.display = 'none';
+            document.getElementById('dashboard-section').style.display = 'block';
+            document.getElementById('user-display').textContent = `👤 ${user.name || user.email}`;
+            DataStore.init();
+            refreshUI();
+        }
+
+        // Demo credentials
+        const DEMO_USERS = [
+            { email: 'admin@aiplot.com', password: 'admin123', name: 'Admin', role: 'admin' },
+            { email: 'agent@aiplot.com', password: 'agent123', name: 'Agent', role: 'agent' }
+        ];
+
+        // Login form handler
+        document.getElementById('login-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const user = DEMO_USERS.find(u => u.email === email && u.password === password);
+            if (user) {
+                showDashboard(user);
+            } else {
+                const alertBox = document.getElementById('alert-box');
+                alertBox.className = 'alert alert-danger';
+                alertBox.textContent = 'Invalid credentials. Try admin@aiplot.com / admin123';
+                alertBox.style.display = 'block';
+            }
+        });
+
+        // Guest login
+        document.getElementById('guest-btn').addEventListener('click', function() {
+            showDashboard({ email: 'guest@aiplot.com', name: 'Guest', role: 'guest' });
+        });
+
+        // Logout
+        document.getElementById('logout-btn').addEventListener('click', function() {
+            document.getElementById('login-section').style.display = 'flex';
+            document.getElementById('dashboard-section').style.display = 'none';
+        });
+
+        // ================== FILE IMPORT ==================
+        document.getElementById('import-btn').addEventListener('click', () => {
+            document.getElementById('import-file-input').click();
+        });
+
+        document.getElementById('import-file-input').addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const ext = file.name.split('.').pop().toLowerCase();
+            let data;
+            if (ext === 'json') {
+                data = await parseJSON(file);
+            } else if (ext === 'csv') {
+                data = await parseCSV(file);
+            } else {
+                alert('Please upload .csv or .json');
                 return;
             }
-            const user = JSON.parse(session);
-            document.getElementById('user-display').textContent = `👤 ${user.name || user.email}`;
+            if (!data || !data.length) {
+                alert('No data found');
+                return;
+            }
+            showMappingModal(data);
+        });
+
+        function parseJSON(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try { resolve(JSON.parse(e.target.result)); } catch (err) { reject(err); }
+                };
+                reader.onerror = reject;
+                reader.readAsText(file);
+            });
+        }
+
+        function parseCSV(file) {
+            return new Promise((resolve, reject) => {
+                if (typeof Papa !== 'undefined') {
+                    Papa.parse(file, {
+                        header: true,
+                        skipEmptyLines: true,
+                        complete: (results) => resolve(results.data),
+                        error: (err) => reject(err)
+                    });
+                } else {
+                    // Fallback simple CSV parser
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const lines = e.target.result.split(/\r?\n/).filter(line => line.trim());
+                        if (lines.length < 2) return resolve([]);
+                        const headers = lines[0].split(',').map(h => h.trim());
+                        const data = [];
+                        for (let i = 1; i < lines.length; i++) {
+                            const vals = lines[i].split(',').map(v => v.trim());
+                            if (vals.length === headers.length) {
+                                const obj = {};
+                                headers.forEach((h, idx) => obj[h] = vals[idx]);
+                                data.push(obj);
+                            }
+                        }
+                        resolve(data);
+                    };
+                    reader.onerror = reject;
+                    reader.readAsText(file);
+                }
+            });
+        }
+
+        function showMappingModal(rows) {
+            const oldModal = document.getElementById('import-mapping-modal');
+            if (oldModal) oldModal.remove();
+            const headers = Object.keys(rows[0] || {});
+            const html = `
+                <div class="modal fade" id="import-mapping-modal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header"><h5>Map Columns</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+                            <div class="modal-body">
+                                <form id="mapping-form">
+                                    <div class="mb-3"><label>Title*</label><select class="form-select" name="title" required><option value="">-- Choose --</option>${headers.map(h => `<option>${h}</option>`).join('')}</select></div>
+                                    <div class="row">
+                                        <div class="col-6 mb-3"><label>X*</label><select class="form-select" name="x" required><option value="">-- Choose --</option>${headers.map(h => `<option>${h}</option>`).join('')}</select></div>
+                                        <div class="col-6 mb-3"><label>Y*</label><select class="form-select" name="y" required><option value="">-- Choose --</option>${headers.map(h => `<option>${h}</option>`).join('')}</select></div>
+                                    </div>
+                                    <div class="mb-3"><label>Type (optional)</label><select class="form-select" name="plotType"><option value="">-- Default (scatter) --</option>${headers.map(h => `<option>${h}</option>`).join('')}</select></div>
+                                    <div class="mb-3"><label>Description (optional)</label><select class="form-select" name="description"><option value="">-- None --</option>${headers.map(h => `<option>${h}</option>`).join('')}</select></div>
+                                </form>
+                                <pre class="bg-light p-2">Sample: ${JSON.stringify(rows.slice(0,3), null, 2)}</pre>
+                            </div>
+                            <div class="modal-footer">
+                                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button class="btn btn-primary" id="confirm-import">Import</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            document.body.insertAdjacentHTML('beforeend', html);
+            const modalEl = document.getElementById('import-mapping-modal');
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+
+            document.getElementById('confirm-import').addEventListener('click', () => {
+                const form = document.getElementById('mapping-form');
+                const titleCol = form.elements.title.value;
+                const xCol = form.elements.x.value;
+                const yCol = form.elements.y.value;
+                const typeCol = form.elements.plotType.value;
+                const descCol = form.elements.description.value;
+                if (!titleCol || !xCol || !yCol) return alert('Map Title, X, Y');
+
+                const plots = [];
+                for (const row of rows) {
+                    const xVal = parseFloat(row[xCol]);
+                    const yVal = parseFloat(row[yCol]);
+                    if (isNaN(xVal) || isNaN(yVal)) continue;
+                    plots.push({
+                        title: row[titleCol] || 'Untitled',
+                        dataPoints: [{ x: xVal, y: yVal }],
+                        plotType: (typeCol && row[typeCol]) ? row[typeCol] : 'scatter',
+                        description: (descCol && row[descCol]) ? row[descCol] : '',
+                        created: new Date().toISOString()
+                    });
+                }
+                if (plots.length === 0) return alert('No valid numeric data');
+                plots.forEach(p => DataStore.addPlot(p));
+                modal.hide();
+                showToast(`Imported ${plots.length} plots`, 'success');
+                refreshUI();
+            });
+        }
+
+        // ================== INITIALIZE ==================
+        // If a session already exists (e.g., user manually reloads), show dashboard directly
+        // This avoids an accidental logout, but we must use a key to detect it.
+        // We'll set a simple session flag in sessionStorage when logging in.
+        const currentSession = sessionStorage.getItem('aiplot_logged_in');
+        if (currentSession === 'true') {
+            showDashboard({ email: 'session-restored', name: 'User' });
+        }
+        // When showing dashboard, set flag
+        const originalShowDashboard = showDashboard;
+        showDashboard = function(user) {
+            sessionStorage.setItem('aiplot_logged_in', 'true');
+            originalShowDashboard(user);
+        };
+        // On logout, remove flag
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            sessionStorage.removeItem('aiplot_logged_in');
         });
     </script>
 </body>
