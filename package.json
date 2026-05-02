@@ -1,0 +1,9 @@
+{
+    "name": "aiplot",
+    "version": "1.0.0",
+    "description": "ai plot",
+    "private": true,
+    "scripts": {
+          "build": "echo 'Static site - no build needed'"
+    }
+}
