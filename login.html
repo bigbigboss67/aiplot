@@ -1,52 +1,131 @@
-<!-- Corrected Login Form Handler in login.html -->
-<script>
-    document.getElementById('login-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Real Estate Platform - Login</title>
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Font Awesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .login-card {
+      max-width: 450px;
+      width: 100%;
+      border-radius: 1rem;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    }
+    .btn-google {
+      background-color: #fff;
+      color: #444;
+      border: 1px solid #ddd;
+    }
+    .btn-google:hover {
+      background-color: #f8f9fa;
+    }
+    .alert {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="card login-card p-4">
+    <div class="text-center mb-4">
+      <i class="fas fa-building fa-3x text-primary"></i>
+      <h2 class="mt-2">AI Real Estate</h2>
+      <p class="text-muted">Sign in to your account</p>
+    </div>
 
-        const email = document.getElementById('email').value.trim();
-        const password = document.getElementById('password').value;
-        const rememberMe = document.getElementById('remember-me')?.checked;
-        const loginBtn = document.getElementById('login-btn');
+    <!-- Alert box -->
+    <div id="alert-box" class="alert" role="alert"></div>
 
-        // Basic UI feedback
-        loginBtn.disabled = true;
-        loginBtn.textContent = 'Signing in...';
+    <!-- Login form -->
+    <form id="login-form">
+      <div class="mb-3">
+        <label for="email" class="form-label">Email address</label>
+        <input type="email" class="form-control" id="email" placeholder="name@example.com" required>
+      </div>
+      <div class="mb-3">
+        <label for="password" class="form-label">Password</label>
+        <input type="password" class="form-control" id="password" placeholder="••••••••" required>
+      </div>
+      <div class="mb-3 form-check">
+        <input type="checkbox" class="form-check-input" id="remember-me">
+        <label class="form-check-label" for="remember-me">Remember me</label>
+      </div>
+      <button type="submit" class="btn btn-primary w-100 mb-3" id="login-btn">
+        <i class="fas fa-sign-in-alt"></i> Sign In
+      </button>
+      <button type="button" class="btn btn-outline-secondary w-100 mb-3" id="guest-btn">
+        <i class="fas fa-user-friends"></i> Continue as Guest
+      </button>
+      <div class="text-center">
+        <p class="text-muted">Demo: <strong>admin@aiplot.com</strong> / <strong>admin123</strong></p>
+        <a href="register.html" class="text-decoration-none">Don't have an account? Register</a>
+      </div>
+    </form>
+  </div>
 
-        // --- DEMO USERS FALLBACK (Always works offline) ---
-        const demoUsers = [
-            { email: 'admin@aiplot.com', password: 'admin123', name: 'Admin User', role: 'admin', status: 'active' },
-            { email: 'agent@aiplot.com', password: 'agent123', name: 'John Smith', role: 'agent', status: 'active' },
-            { email: 'emma@aiplot.com', password: 'agent123', name: 'Emma Wilson', role: 'agent', status: 'active' }
-        ];
+  <script>
+    // Helper to show alert messages
+    function showAlert(message, type) {
+      const box = document.getElementById('alert-box');
+      box.className = `alert alert-${type}`;
+      box.textContent = message;
+      box.style.display = 'block';
+      setTimeout(() => { box.style.display = 'none'; }, 5000);
+    }
 
-        const user = demoUsers.find(u => u.email === email && u.password === password && u.status === 'active');
+    // Set session and redirect
+    function createSession(email, name, role = 'guest') {
+      const sessionData = { email, name, role };
+      const remember = document.getElementById('remember-me').checked;
+      if (remember) {
+        localStorage.setItem('aiplot_session', JSON.stringify(sessionData));
+      } else {
+        sessionStorage.setItem('aiplot_session', JSON.stringify(sessionData));
+      }
+      window.location.href = 'index.html';
+    }
 
-        if (user) {
-            // --- SUCCESS: Create consistent session ---
-            const session = {
-                email: user.email,
-                name: user.name,
-                role: user.role
-                // No Firebase auth needed for demo
-            };
+    // Demo users (always works, no backend)
+    const DEMO_USERS = [
+      { email: 'admin@aiplot.com', password: 'admin123', name: 'Admin User', role: 'admin' },
+      { email: 'agent@aiplot.com', password: 'agent123', name: 'John Smith', role: 'agent' },
+      { email: 'emma@aiplot.com', password: 'agent123', name: 'Emma Wilson', role: 'agent' }
+    ];
 
-            // Store session EXACTLY as app.js expects
-            if (rememberMe) {
-                localStorage.setItem('aiplot_session', JSON.stringify(session));
-            } else {
-                sessionStorage.setItem('aiplot_session', JSON.stringify(session));
-            }
-
-            showAlert('Login successful! Redirecting...', 'success');
-            setTimeout(() => {
-                window.location.href = 'index.html';
-            }, 1000);
-
-        } else {
-            // --- FAILURE ---
-            showAlert('Invalid email or password. Try demo: admin@aiplot.com / admin123', 'error');
-            loginBtn.disabled = false;
-            loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In';
-        }
+    // Form submit
+    document.getElementById('login-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const user = DEMO_USERS.find(u => u.email === email && u.password === password);
+      
+      if (user) {
+        createSession(user.email, user.name, user.role);
+      } else {
+        showAlert('Invalid email or password. Try the demo credentials above.', 'danger');
+      }
     });
-</script>
+
+    // Guest login
+    document.getElementById('guest-btn').addEventListener('click', function() {
+      createSession('guest@aiplot.com', 'Guest User', 'guest');
+    });
+
+    // Clear any previous session that might be corrupt (optional safety)
+    // This ensures a clean state – comment out if you want to keep old session
+    localStorage.removeItem('aiplot_session');
+    sessionStorage.removeItem('aiplot_session');
+  </script>
+</body>
+</html>
