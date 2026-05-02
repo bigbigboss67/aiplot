@@ -1,4 +1,3 @@
-
 // app.js - Main application logic for AI-Plot
 
 // ========================================
