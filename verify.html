@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Account - AI Plot Portal</title>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .verify-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 100%;
+            overflow: hidden;
+            animation: slideUp 0.5s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .verify-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px 30px;
+            text-align: center;
+            color: white;
+        }
+
+        .verify-header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .verify-header p {
+            opacity: 0.9;
+            font-size: 0.95em;
+        }
+
+        .verify-body {
+            padding: 40px 30px;
+        }
+
+        .info-box {
+            background: #ebf8ff;
+            border-left: 4px solid #4299e1;
+            padding: 15px;
+            margin-bottom: 25px;
+            border-radius: 4px;
+        }
+
+        .info-box h3 {
+            color: #2b6cb0;
+            margin-bottom: 8px;
+            font-size: 1em;
+        }
+
+        .info-box p {
+            color: #2c5282;
+            font-size: 0.9em;
+            line-height: 1.6;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #2d3748;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .input-wrapper i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #a0aec0;
+            font-size: 1.1em;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 14px 15px 14px 45px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: all 0.3s;
+            outline: none;
+            text-align: center;
+            letter-spacing: 8px;
+            font-weight: bold;
+            font-size: 1.3em;
+        }
+
+        .form-group input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn-verify {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 15px;
+        }
+
+        .btn-verify:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-verify:active {
+            transform: translateY(0);
+        }
+
+        .btn-verify:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-resend {
+            width: 100%;
+            padding: 15px;
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-resend:hover {
+            background: #f7fafc;
+        }
+
+        .alert {
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .alert-error {
+            background: #fff5f5;
+            border: 1px solid #fc8181;
+            color: #c53030;
+        }
+
+        .alert-success {
+            background: #f0fff4;
+            border: 1px solid #68d391;
+            color: #276749;
+        }
+
+        .alert-info {
+            background: #ebf8ff;
+            border: 1px solid #63b3ed;
+            color: #2b6cb0;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .login-link {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.9em;
+            color: #718096;
+        }
+
+        .login-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .login-link a:hover {
+            text-decoration: underline;
+        }
+
+        .code-display {
+            background: #f7fafc;
+            border: 2px dashed #cbd5e0;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .code-display h3 {
+            color: #2d3748;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+        }
+
+        .code-display .code {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+            letter-spacing: 10px;
+            font-family: 'Courier New', monospace;
+        }
+
+        @media (max-width: 480px) {
+            .verify-header {
+                padding: 30px 20px;
+            }
+
+            .verify-header h1 {
+                font-size: 1.7em;
+            }
+
+            .verify-body {
+                padding: 30px 20px;
+            }
+
+            .form-group input {
+                font-size: 1.1em;
+                letter-spacing: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="verify-container">
+        <div class="verify-header">
+            <h1><i class="fas fa-shield-alt"></i> AI Plot</h1>
+            <p>Account Verification</p>
+        </div>
+
+        <div class="verify-body">
+            <div id="alert-box" class="alert"></div>
+
+            <div class="info-box">
+                <h3><i class="fas fa-info-circle"></i> How It Works</h3>
+                <p>
+                    1. Administrator has approved your account<br>
+                    2. You received a verification code via email<br>
+                    3. Enter the code below to activate your account<br>
+                    4. Once verified, you can login to the portal
+                </p>
+            </div>
+
+            <div id="email-display" class="code-display">
+                <h3>Verification Code Sent To:</h3>
+                <p id="user-email" style="color: #667eea; font-weight: 600; margin-top: 10px;"></p>
+            </div>
+
+            <form id="verify-form">
+                <div class="form-group">
+                    <label for="email">Your Email Address</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-envelope"></i>
+                        <input type="email" id="email" placeholder="your@email.com" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="verificationCode">Verification Code</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-key"></i>
+                        <input type="text" id="verificationCode" placeholder="123456" required maxlength="6" pattern="[0-9]{6}">
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-verify" id="verify-btn">
+                    <i class="fas fa-check-circle"></i> Verify Account
+                </button>
+            </form>
+
+            <button class="btn-resend" onclick="resendCode()">
+                <i class="fas fa-redo"></i> Resend Verification Code
+            </button>
+
+            <div class="login-link">
+                Already verified? <a href="login.html">Login here</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDKthkVZLmK5Y_wT0Jmx90UEkzJs_Pz9-I",
+            authDomain: "plot-ai-87781.firebaseapp.com",
+            databaseURL: "https://plot-ai-87781-default-rtdb.firebaseio.com",
+            projectId: "plot-ai-87781",
+            storageBucket: "plot-ai-87781.firebasestorage.app",
+            messagingSenderId: "723228647195",
+            appId: "1:723228647195:web:00693e31e923014e1efdbe"
+        };
+
+        // Initialize Firebase
+        let auth, db;
+        try {
+            const app = firebase.initializeApp(firebaseConfig);
+            auth = firebase.auth();
+            db = firebase.database();
+            console.log('✅ Firebase initialized');
+        } catch (error) {
+            console.error('❌ Firebase init failed:', error);
+        }
+
+        function showAlert(message, type = 'error') {
+            const alertBox = document.getElementById('alert-box');
+            alertBox.className = `alert alert-${type}`;
+            alertBox.innerHTML = `<i class="fas fa-${type === 'error' ? 'exclamation-circle' : type === 'success' ? 'check-circle' : 'info-circle'}"></i> ${message}`;
+            alertBox.style.display = 'block';
+            
+            setTimeout(() => {
+                alertBox.style.display = 'none';
+            }, 5000);
+        }
+
+        // Get email from URL parameter or sessionStorage
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const email = urlParams.get('email') || sessionStorage.getItem('verify_email');
+            
+            if (email) {
+                document.getElementById('email').value = email;
+                document.getElementById('user-email').textContent = email;
+            }
+        });
+
+        // Verification form handler
+        document.getElementById('verify-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value.trim();
+            const code = document.getElementById('verificationCode').value.trim();
+            const verifyBtn = document.getElementById('verify-btn');
+
+            // Disable button and show loading
+            verifyBtn.disabled = true;
+            verifyBtn.innerHTML = '<span class="loading"></span> Verifying...';
+
+            try {
+                // Find user by email in Firebase
+                const usersRef = db.ref('users');
+                const snapshot = await usersRef.orderByChild('email').equalTo(email).once('value');
+                
+                if (!snapshot.exists()) {
+                    showAlert('No account found with this email. Please register first.');
+                    return;
+                }
+
+                let userUid = null;
+                let userData = null;
+                
+                snapshot.forEach((childSnapshot) => {
+                    userUid = childSnapshot.key;
+                    userData = childSnapshot.val();
+                });
+
+                // Check if user is approved
+                if (userData.status !== 'approved') {
+                    showAlert('Your account is still pending approval. Please wait for admin approval.');
+                    return;
+                }
+
+                // Check verification code
+                if (userData.verificationCode !== code) {
+                    showAlert('Invalid verification code. Please check your email and try again.');
+                    return;
+                }
+
+                // Check if code expired (15 minutes)
+                const codeTimestamp = userData.verificationCodeSentAt;
+                const now = Date.now();
+                const fifteenMinutes = 15 * 60 * 1000;
+                
+                if (now - codeTimestamp > fifteenMinutes) {
+                    showAlert('Verification code has expired. Please request a new code.');
+                    return;
+                }
+
+                // Activate account
+                await db.ref('users/' + userUid).update({
+                    status: 'active',
+                    verified: true,
+                    verifiedAt: new Date().toISOString(),
+                    verificationCode: null, // Remove code after use
+                    verificationCodeSentAt: null
+                });
+
+                // Remove from pending approvals
+                await db.ref('pending_approvals/' + userUid).remove();
+
+                showAlert('✅ Account verified successfully! Redirecting to login...', 'success');
+                
+                // Redirect to login after 2 seconds
+                setTimeout(() => {
+                    window.location.href = 'login.html';
+                }, 2000);
+
+            } catch (error) {
+                console.error('Verification error:', error);
+                showAlert('Verification failed: ' + error.message);
+            } finally {
+                verifyBtn.disabled = false;
+                verifyBtn.innerHTML = '<i class="fas fa-check-circle"></i> Verify Account';
+            }
+        });
+
+        // Resend verification code
+        async function resendCode() {
+            const email = document.getElementById('email').value.trim();
+            
+            if (!email) {
+                showAlert('Please enter your email address first.');
+                return;
+            }
+
+            try {
+                // Find user
+                const usersRef = db.ref('users');
+                const snapshot = await usersRef.orderByChild('email').equalTo(email).once('value');
+                
+                if (!snapshot.exists()) {
+                    showAlert('No account found with this email.');
+                    return;
+                }
+
+                let userUid = null;
+                let userData = null;
+                
+                snapshot.forEach((childSnapshot) => {
+                    userUid = childSnapshot.key;
+                    userData = childSnapshot.val();
+                });
+
+                if (userData.status === 'active') {
+                    showAlert('Your account is already active. You can login now.');
+                    return;
+                }
+
+                if (userData.status !== 'approved') {
+                    showAlert('Your account is still pending admin approval.');
+                    return;
+                }
+
+                // Generate new code
+                const newCode = Math.floor(100000 + Math.random() * 900000).toString();
+                
+                // In production, send via email service (SendGrid, AWS SES, etc.)
+                // For now, store in Firebase and show in console (demo mode)
+                await db.ref('users/' + userUid).update({
+                    verificationCode: newCode,
+                    verificationCodeSentAt: Date.now()
+                });
+
+                // DEMO MODE: Show code in alert
+                // In production, this would be sent via email
+                showAlert(`Demo Mode: Your verification code is ${newCode}`, 'info');
+                
+                console.log('📧 Verification code for', email, ':', newCode);
+
+            } catch (error) {
+                console.error('Resend error:', error);
+                showAlert('Failed to resend code: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>
