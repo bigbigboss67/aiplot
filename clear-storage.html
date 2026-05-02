@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clear Storage & Login</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0a1628 0%, #1a2744 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: #1a2744;
+            border: 1px solid #2a3f6f;
+            border-radius: 12px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+        h1 { color: #ffffff; margin-bottom: 10px; }
+        p { color: #8892b0; margin-bottom: 20px; }
+        button {
+            padding: 14px 30px;
+            background: #10b981;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 10px;
+        }
+        button:hover { background: #059669; }
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 2px solid #10b981;
+            border-radius: 8px;
+        }
+        .result h3 { color: #ffffff; margin-bottom: 10px; }
+        .result a {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 12px 30px;
+            background: #3b82f6;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧹 Clear Storage</h1>
+        <p>This will clear all cached data and redirect you to login</p>
+        
+        <button onclick="clearAndLogin()">✓ Clear Storage & Open App</button>
+        
+        <div id="result"></div>
+    </div>
+
+    <script>
+        function clearAndLogin() {
+            // Clear all localStorage
+            localStorage.clear();
+            
+            // Clear sessionStorage
+            sessionStorage.clear();
+            
+            document.getElementById('result').innerHTML = `
+                <div class="result">
+                    <h3>✅ Storage Cleared!</h3>
+                    <p>Opening app in new tab...</p>
+                    <a href="https://ai-plot-app.vercel.app/login" target="_blank">
+                        → Go to Login Page
+                    </a>
+                </div>
+            `;
+            
+            // Open login page directly
+            setTimeout(() => {
+                window.open('https://ai-plot-app.vercel.app/login', '_blank');
+            }, 500);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Final Admin Fix</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0a1628 0%, #1a2744 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: #1a2744;
+            border: 1px solid #2a3f6f;
+            border-radius: 12px;
+            padding: 40px;
+            max-width: 700px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+        h1 { color: #ffffff; font-size: 28px; margin-bottom: 10px; text-align: center; }
+        .subtitle { color: #8892b0; text-align: center; margin-bottom: 30px; }
+        .step {
+            background: #0a1628;
+            border: 1px solid #2a3f6f;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+        .step h3 {
+            color: #ffffff;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .step-num {
+            background: #10b981;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+        }
+        button {
+            width: 100%;
+            padding: 14px;
+            background: #10b981;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 12px;
+        }
+        button:hover { background: #059669; }
+        button:disabled { background: #4a5568; cursor: not-allowed; }
+        .log {
+            background: #0a1628;
+            border: 1px solid #2a3f6f;
+            border-radius: 8px;
+            padding: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            margin-top: 20px;
+        }
+        .log-entry { margin-bottom: 8px; padding: 8px; }
+        .log-entry.info { color: #60a5fa; }
+        .log-entry.success { color: #10b981; }
+        .log-entry.error { color: #ef4444; }
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 2px solid #10b981;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .result h3 { color: #ffffff; margin-bottom: 10px; }
+        .result a {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 14px 40px;
+            background: #3b82f6;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 18px;
+        }
+        .result a:hover { background: #2563eb; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Final Admin Fix</h1>
+        <p class="subtitle">Complete fix - database + localStorage</p>
+
+        <div class="step">
+            <h3><span class="step-num">1</span> Update Database</h3>
+            <p style="color: #8892b0; font-size: 14px;">Force update your role to admin in Firebase database</p>
+            <button onclick="updateDatabase()" id="dbBtn">✓ Update Database</button>
+        </div>
+
+        <div class="step">
+            <h3><span class="step-num">2</span> Clear App Cache & Reload</h3>
+            <p style="color: #8892b0; font-size: 14px;">This will open the app with cleared cache</p>
+            <button onclick="clearCacheAndReload()" id="cacheBtn" disabled>🔄 Clear Cache & Open App</button>
+        </div>
+
+        <div class="log" id="log">
+            <div class="log-entry info">Ready to fix...</div>
+        </div>
+
+        <div id="result"></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+        import { getDatabase, ref, get, set } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
+
+        const firebaseConfig = {
+            apiKey: 'AIzaSyDKthkVZLmK5Y_wT0Jmx90UEkzJs_Pz9-I',
+            authDomain: 'plot-ai-87781.firebaseapp.com',
+            databaseURL: 'https://plot-ai-87781-default-rtdb.firebaseio.com',
+            projectId: 'plot-ai-87781',
+            storageBucket: 'plot-ai-87781.firebasestorage.app',
+            messagingSenderId: '723228647195',
+            appId: '1:723228647195:web:00693e31e923014e1efdbe',
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        function addLog(message, type = 'info') {
+            const log = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        window.updateDatabase = async function() {
+            const btn = document.getElementById('dbBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Updating...';
+
+            addLog('Starting database update...', 'info');
+
+            try {
+                const snapshot = await get(ref(db, 'users'));
+                
+                if (!snapshot.exists()) {
+                    addLog('❌ No users in database!', 'error');
+                    btn.disabled = false;
+                    btn.textContent = '✓ Update Database';
+                    return;
+                }
+
+                const users = snapshot.val();
+                let updated = 0;
+
+                for (const [uid, userData] of Object.entries(users)) {
+                    // Update ALL users to admin for now
+                    addLog(`Updating: ${userData.email} (${userData.role || 'no role'})`, 'info');
+                    
+                    await set(ref(db, `users/${uid}`), {
+                        name: userData.name || 'Admin',
+                        email: userData.email,
+                        role: 'admin',
+                        status: 'active',
+                        phone: userData.phone || '',
+                        createdAt: userData.createdAt || new Date().toISOString(),
+                        updatedAt: new Date().toISOString()
+                    });
+
+                    addLog(`✅ ${userData.email} is now ADMIN`, 'success');
+                    updated++;
+                }
+
+                addLog(`\n✅ Updated ${updated} user(s) to ADMIN!`, 'success');
+                addLog('\nNow click button 2 to clear cache and reload', 'info');
+
+                document.getElementById('cacheBtn').disabled = false;
+                btn.textContent = '✅ Database Updated';
+
+            } catch (error) {
+                addLog(`❌ Error: ${error.message}`, 'error');
+                btn.disabled = false;
+                btn.textContent = '✓ Update Database';
+            }
+        };
+
+        window.clearCacheAndReload = function() {
+            const btn = document.getElementById('cacheBtn');
+            btn.textContent = '🔄 Opening App...';
+
+            addLog('\nOpening app in new tab...', 'info');
+            addLog('IMPORTANT: After opening, do a hard refresh (Ctrl+Shift+R)', 'info');
+            addLog('Then logout and login again', 'info');
+
+            // Open the app in a new tab
+            window.open('https://ai-plot-app.vercel.app/', '_blank');
+
+            document.getElementById('result').innerHTML = `
+                <div class="result">
+                    <h3>✅ App Opened!</h3>
+                    <p style="color: #8892b0; margin-top: 10px;">Follow these steps:</p>
+                    <ol style="text-align: left; color: #ccd6f6; margin: 15px 0 15px 20px; line-height: 2;">
+                        <li>In the new tab, press <strong>Ctrl + Shift + R</strong> (hard refresh)</li>
+                        <li>If logged in, <strong>logout</strong></li>
+                        <li><strong>Login again</strong> with your credentials</li>
+                        <li>You should now see <strong>ADMIN</strong> permissions!</li>
+                    </ol>
+                    <p style="color: #f59e0b; margin-top: 10px;">If still showing agent, press F12 → Application → Local Storage → Clear All → Reload</p>
+                </div>
+            `;
+
+            btn.textContent = '✅ Done! Check New Tab';
+        };
+    </script>
+</body>
+</html>

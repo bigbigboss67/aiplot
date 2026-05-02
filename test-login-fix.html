@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Test & Fix</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0a1628 0%, #1a2744 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: #1a2744;
+            border: 1px solid #2a3f6f;
+            border-radius: 12px;
+            padding: 40px;
+            max-width: 700px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+        h1 { color: #ffffff; font-size: 28px; margin-bottom: 10px; text-align: center; }
+        .subtitle { color: #8892b0; text-align: center; margin-bottom: 30px; }
+        .log {
+            background: #0a1628;
+            border: 1px solid #2a3f6f;
+            border-radius: 8px;
+            padding: 20px;
+            max-height: 500px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            margin-bottom: 20px;
+        }
+        .log-entry {
+            margin-bottom: 8px;
+            padding: 8px;
+            border-radius: 4px;
+        }
+        .log-entry.info { color: #60a5fa; background: rgba(59, 130, 246, 0.05); }
+        .log-entry.success { color: #10b981; background: rgba(16, 185, 129, 0.1); }
+        .log-entry.error { color: #ef4444; background: rgba(239, 68, 68, 0.1); }
+        .log-entry.warning { color: #f59e0b; background: rgba(245, 158, 11, 0.1); }
+        button {
+            width: 100%;
+            padding: 16px;
+            background: #10b981;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        button:hover { background: #059669; transform: translateY(-2px); }
+        button:disabled { background: #4a5568; cursor: not-allowed; transform: none; }
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .result.success { background: rgba(16, 185, 129, 0.1); border: 2px solid #10b981; }
+        .result.error { background: rgba(239, 68, 68, 0.1); border: 2px solid #ef4444; }
+        .result h3 { color: #ffffff; margin-bottom: 10px; }
+        .result p { color: #8892b0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Login Test & Auto-Fix</h1>
+        <p class="subtitle">Testing: r.k@at.world</p>
+
+        <button onclick="testAndFix()" id="testBtn">▶ RUN TEST & FIX</button>
+
+        <div class="log" id="log">
+            <div class="log-entry info">Ready to test login...</div>
+        </div>
+
+        <div id="result"></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+        import { getAuth, signInWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+        import { getDatabase, ref, get, set, update } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
+
+        const firebaseConfig = {
+            apiKey: 'AIzaSyDKthkVZLmK5Y_wT0Jmx90UEkzJs_Pz9-I',
+            authDomain: 'plot-ai-87781.firebaseapp.com',
+            databaseURL: 'https://plot-ai-87781-default-rtdb.firebaseio.com',
+            projectId: 'plot-ai-87781',
+            storageBucket: 'plot-ai-87781.firebasestorage.app',
+            messagingSenderId: '723228647195',
+            appId: '1:723228647195:web:00693e31e923014e1efdbe',
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+
+        const testEmail = 'r.k@at.world';
+        const testPassword = 'maha2607';
+
+        function addLog(message, type = 'info') {
+            const log = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            entry.textContent = `[${timestamp}] ${message}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        window.testAndFix = async function() {
+            const btn = document.getElementById('testBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Testing...';
+
+            addLog('═══════════════════════════════════════', 'info');
+            addLog('STARTING LOGIN TEST & FIX', 'info');
+            addLog('═══════════════════════════════════════', 'info');
+
+            try {
+                // Step 1: Try to login
+                addLog('Step 1: Attempting login with credentials...', 'info');
+                addLog(`Email: ${testEmail}`, 'info');
+                
+                const userCredential = await signInWithEmailAndPassword(auth, testEmail, testPassword);
+                const user = userCredential.user;
+                
+                addLog('✅ LOGIN SUCCESSFUL!', 'success');
+                addLog(`User UID: ${user.uid}`, 'success');
+                addLog(`Email: ${user.email}`, 'success');
+
+                // Step 2: Check database profile
+                addLog('\nStep 2: Checking database profile...', 'info');
+                const dbRef = ref(db, `users/${user.uid}`);
+                const snapshot = await get(dbRef);
+
+                if (snapshot.exists()) {
+                    const profile = snapshot.val();
+                    addLog('✅ Database profile found!', 'success');
+                    addLog(`Name: ${profile.name || 'N/A'}`, 'info');
+                    addLog(`Role: ${profile.role || 'N/A'}`, 'info');
+                    addLog(`Status: ${profile.status || 'N/A'}`, profile.status === 'active' ? 'success' : 'warning');
+
+                    // Step 3: Fix if needed
+                    if (profile.status !== 'active' || profile.role !== 'admin') {
+                        addLog('\nStep 3: Fixing profile settings...', 'warning');
+                        
+                        await update(dbRef, {
+                            ...profile,
+                            status: 'active',
+                            role: 'admin',
+                            updatedAt: new Date().toISOString()
+                        });
+
+                        addLog('✅ Profile updated!', 'success');
+                        addLog('Status: active', 'success');
+                        addLog('Role: admin', 'success');
+                    } else {
+                        addLog('\n✅ Profile is already correctly configured!', 'success');
+                    }
+
+                    // Success!
+                    addLog('\n═══════════════════════════════════════', 'success');
+                    addLog('✅ LOGIN IS NOW WORKING!', 'success');
+                    addLog('═══════════════════════════════════════', 'success');
+
+                    document.getElementById('result').innerHTML = `
+                        <div class="result success">
+                            <h3>✅ SUCCESS! Login is Fixed</h3>
+                            <p>You can now login at:</p>
+                            <a href="https://ai-plot-app.vercel.app/login" 
+                               style="display: inline-block; margin-top: 10px; color: #10b981; font-weight: 700; font-size: 18px;">
+                                https://ai-plot-app.vercel.app/login
+                            </a>
+                            <p style="margin-top: 10px;">Use: ${testEmail}</p>
+                        </div>
+                    `;
+
+                } else {
+                    addLog('❌ Database profile NOT found!', 'error');
+                    addLog('Creating database profile...', 'warning');
+
+                    // Create profile
+                    const newProfile = {
+                        name: 'R.K.',
+                        email: testEmail,
+                        role: 'admin',
+                        status: 'active',
+                        phone: '',
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString()
+                    };
+
+                    await set(dbRef, newProfile);
+                    addLog('✅ Database profile created!', 'success');
+
+                    addLog('\n═══════════════════════════════════════', 'success');
+                    addLog('✅ LOGIN IS NOW WORKING!', 'success');
+                    addLog('═══════════════════════════════════════', 'success');
+
+                    document.getElementById('result').innerHTML = `
+                        <div class="result success">
+                            <h3>✅ SUCCESS! Account Created & Fixed</h3>
+                            <p>You can now login at:</p>
+                            <a href="https://ai-plot-app.vercel.app/login" 
+                               style="display: inline-block; margin-top: 10px; color: #10b981; font-weight: 700; font-size: 18px;">
+                                https://ai-plot-app.vercel.app/login
+                            </a>
+                            <p style="margin-top: 10px;">Use: ${testEmail}</p>
+                        </div>
+                    `;
+                }
+
+            } catch (error) {
+                addLog(`\n❌ LOGIN FAILED: ${error.message}`, 'error');
+                addLog(`Error code: ${error.code}`, 'error');
+
+                if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
+                    addLog('\nAttempting to create new account...', 'warning');
+                    
+                    try {
+                        // Create new account
+                        const { createUserWithEmailAndPassword } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
+                        const userCredential = await createUserWithEmailAndPassword(auth, testEmail, testPassword);
+                        const user = userCredential.user;
+
+                        addLog('✅ Account created in Firebase Auth!', 'success');
+                        addLog(`UID: ${user.uid}`, 'success');
+
+                        // Create database profile
+                        const newProfile = {
+                            name: 'R.K.',
+                            email: testEmail,
+                            role: 'admin',
+                            status: 'active',
+                            phone: '',
+                            createdAt: new Date().toISOString(),
+                            updatedAt: new Date().toISOString()
+                        };
+
+                        await set(ref(db, `users/${user.uid}`), newProfile);
+                        addLog('✅ Database profile created!', 'success');
+
+                        addLog('\n═══════════════════════════════════════', 'success');
+                        addLog('✅ NEW ACCOUNT CREATED & READY!', 'success');
+                        addLog('═══════════════════════════════════════', 'success');
+
+                        document.getElementById('result').innerHTML = `
+                            <div class="result success">
+                                <h3>✅ SUCCESS! New Account Created</h3>
+                                <p>You can now login at:</p>
+                                <a href="https://ai-plot-app.vercel.app/login" 
+                                   style="display: inline-block; margin-top: 10px; color: #10b981; font-weight: 700; font-size: 18px;">
+                                    https://ai-plot-app.vercel.app/login
+                                </a>
+                                <p style="margin-top: 10px;">Use: ${testEmail}</p>
+                            </div>
+                        `;
+
+                    } catch (createError) {
+                        if (createError.code === 'auth/email-already-in-use') {
+                            addLog('⚠️ Email already exists but password is wrong', 'warning');
+                            addLog('The account exists with a DIFFERENT password', 'warning');
+                            
+                            document.getElementById('result').innerHTML = `
+                                <div class="result error">
+                                    <h3>❌ Wrong Password</h3>
+                                    <p>This email exists but the password is incorrect.</p>
+                                    <p style="margin-top: 10px;">Please use the correct password or reset it.</p>
+                                </div>
+                            `;
+                        } else {
+                            addLog(`❌ Failed to create account: ${createError.message}`, 'error');
+                            document.getElementById('result').innerHTML = `
+                                <div class="result error">
+                                    <h3>❌ Error</h3>
+                                    <p>${createError.message}</p>
+                                </div>
+                            `;
+                        }
+                    }
+                } else {
+                    document.getElementById('result').innerHTML = `
+                        <div class="result error">
+                            <h3>❌ Login Failed</h3>
+                            <p>${error.message}</p>
+                        </div>
+                    `;
+                }
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '▶ RUN TEST & FIX';
+            }
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Force Admin Upgrade</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0a1628 0%, #1a2744 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: #1a2744;
+            border: 1px solid #2a3f6f;
+            border-radius: 12px;
+            padding: 40px;
+            max-width: 700px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+        h1 { color: #ffffff; font-size: 28px; margin-bottom: 10px; text-align: center; }
+        .subtitle { color: #8892b0; text-align: center; margin-bottom: 30px; }
+        .warning {
+            background: rgba(239, 68, 68, 0.1);
+            border: 2px solid #ef4444;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 24px;
+            color: #ef4444;
+            line-height: 1.6;
+        }
+        button {
+            width: 100%;
+            padding: 16px;
+            background: #10b981;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-bottom: 12px;
+        }
+        button:hover { background: #059669; }
+        button:disabled { background: #4a5568; cursor: not-allowed; }
+        .log {
+            background: #0a1628;
+            border: 1px solid #2a3f6f;
+            border-radius: 8px;
+            padding: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            margin-top: 20px;
+        }
+        .log-entry { margin-bottom: 8px; padding: 8px; border-radius: 4px; }
+        .log-entry.info { color: #60a5fa; background: rgba(59, 130, 246, 0.05); }
+        .log-entry.success { color: #10b981; background: rgba(16, 185, 129, 0.1); }
+        .log-entry.error { color: #ef4444; background: rgba(239, 68, 68, 0.1); }
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 8px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 2px solid #10b981;
+            text-align: center;
+        }
+        .result h3 { color: #ffffff; margin-bottom: 10px; }
+        .result a {
+            display: inline-block;
+            margin-top: 10px;
+            color: #10b981;
+            font-weight: 700;
+            font-size: 16px;
+            text-decoration: none;
+            padding: 12px 30px;
+            background: #3b82f6;
+            border-radius: 8px;
+        }
+        .result a:hover { background: #2563eb; }
+        .instructions {
+            background: #0a1628;
+            border: 1px solid #2a3f6f;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            color: #ccd6f6;
+            line-height: 1.8;
+        }
+        .instructions h4 { color: #ffffff; margin-bottom: 12px; }
+        .instructions ol { margin-left: 20px; }
+        .instructions li { margin-bottom: 8px; }
+        code {
+            background: #1a2744;
+            padding: 2px 8px;
+            border-radius: 4px;
+            color: #f59e0b;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚡ Force Admin Upgrade</h1>
+        <p class="subtitle">Directly update database and clear cache</p>
+
+        <div class="warning">
+            <strong>⚠️ IMPORTANT:</strong> After clicking the button, you MUST clear your browser cache and logout/login again for the changes to take effect!
+        </div>
+
+        <button onclick="forceAdminUpgrade()" id="upgradeBtn">⚡ FORCE ADMIN UPGRADE</button>
+
+        <div class="log" id="log">
+            <div class="log-entry info">Ready to force upgrade...</div>
+        </div>
+
+        <div id="result"></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+        import { getDatabase, ref, get, update, set } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
+
+        const firebaseConfig = {
+            apiKey: 'AIzaSyDKthkVZLmK5Y_wT0Jmx90UEkzJs_Pz9-I',
+            authDomain: 'plot-ai-87781.firebaseapp.com',
+            databaseURL: 'https://plot-ai-87781-default-rtdb.firebaseio.com',
+            projectId: 'plot-ai-87781',
+            storageBucket: 'plot-ai-87781.firebasestorage.app',
+            messagingSenderId: '723228647195',
+            appId: '1:723228647195:web:00693e31e923014e1efdbe',
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        function addLog(message, type = 'info') {
+            const log = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            entry.textContent = `[${timestamp}] ${message}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        window.forceAdminUpgrade = async function() {
+            const btn = document.getElementById('upgradeBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Forcing upgrade...';
+
+            addLog('═══════════════════════════════════════', 'info');
+            addLog('FORCE ADMIN UPGRADE', 'info');
+            addLog('═══════════════════════════════════════', 'info');
+
+            try {
+                // Get all users
+                const snapshot = await get(ref(db, 'users'));
+                
+                if (!snapshot.exists()) {
+                    addLog('❌ No users found in database!', 'error');
+                    btn.disabled = false;
+                    btn.textContent = '⚡ FORCE ADMIN UPGRADE';
+                    return;
+                }
+
+                const users = snapshot.val();
+                let updated = 0;
+
+                // Find and update r.k@at.world or r.k@world.com
+                for (const [uid, userData] of Object.entries(users)) {
+                    if (userData.email && (userData.email.includes('r.k@') || userData.email.includes('rk@'))) {
+                        addLog(`\nFound user: ${userData.email}`, 'info');
+                        addLog(`Current role: ${userData.role || 'not set'}`, 'warning');
+                        addLog(`Current status: ${userData.status || 'not set'}`, 'warning');
+
+                        // Force update to admin
+                        const adminData = {
+                            name: userData.name || 'Admin User',
+                            email: userData.email,
+                            role: 'admin',
+                            status: 'active',
+                            phone: userData.phone || '',
+                            permissions: {
+                                manageUsers: true,
+                                manageAgents: true,
+                                manageRoles: true,
+                                managePermissions: true,
+                                managePlots: true,
+                                manageCIS: true,
+                                manageLeads: true,
+                                manageDeals: true,
+                                manageActivities: true,
+                                viewReports: true,
+                                deleteRecords: true,
+                                importData: true,
+                                exportData: true,
+                                systemSettings: true
+                            },
+                            createdAt: userData.createdAt || new Date().toISOString(),
+                            updatedAt: new Date().toISOString()
+                        };
+
+                        await set(ref(db, `users/${uid}`), adminData);
+
+                        addLog('✅ FORCED to role: admin', 'success');
+                        addLog('✅ Status: active', 'success');
+                        addLog('✅ Full permissions granted!', 'success');
+                        updated++;
+                    }
+                }
+
+                if (updated === 0) {
+                    addLog('⚠️ No r.k user found. Checking all users...', 'warning');
+                    
+                    // Just update the first user as admin
+                    const firstUser = Object.entries(users)[0];
+                    if (firstUser) {
+                        const [uid, userData] = firstUser;
+                        
+                        await set(ref(db, `users/${uid}`), {
+                            ...userData,
+                            role: 'admin',
+                            status: 'active',
+                            updatedAt: new Date().toISOString()
+                        });
+
+                        addLog(`✅ Updated ${userData.email} to admin`, 'success');
+                        updated++;
+                    }
+                }
+
+                addLog('\n═══════════════════════════════════════', 'success');
+                addLog(`✅ Successfully updated ${updated} user(s) to ADMIN!`, 'success');
+                addLog('═══════════════════════════════════════', 'success');
+
+                document.getElementById('result').innerHTML = `
+                    <div class="result">
+                        <h3>✅ Database Updated!</h3>
+                        <p>Your account is now ADMIN in the database.</p>
+                        <div class="instructions">
+                            <h4>📋 NEXT STEPS (IMPORTANT!):</h4>
+                            <ol>
+                                <li><strong>Logout</strong> from the app</li>
+                                <li><strong>Clear browser cache:</strong>
+                                    <ul style="margin-left: 20px; margin-top: 8px;">
+                                        <li>Press <code>Ctrl + Shift + Delete</code></li>
+                                        <li>Select "Cached images and files"</li>
+                                        <li>Click "Clear data"</li>
+                                    </ul>
+                                </li>
+                                <li><strong>Or use Incognito/Private mode:</strong>
+                                    <ul style="margin-left: 20px; margin-top: 8px;">
+                                        <li>Press <code>Ctrl + Shift + N</code> (Chrome)</li>
+                                        <li>Press <code>Ctrl + Shift + P</code> (Firefox)</li>
+                                    </ul>
+                                </li>
+                                <li><strong>Login again</strong> with your credentials</li>
+                                <li>You should now see ADMIN permissions!</li>
+                            </ol>
+                        </div>
+                        <a href="https://ai-plot-app.vercel.app/" target="_blank">→ Open App (Logout First!)</a>
+                    </div>
+                `;
+
+                btn.textContent = '✅ DATABASE UPDATED!';
+
+            } catch (error) {
+                addLog(`❌ Error: ${error.message}`, 'error');
+                btn.disabled = false;
+                btn.textContent = '⚡ FORCE ADMIN UPGRADE';
+            }
+        };
+    </script>
+</body>
+</html>

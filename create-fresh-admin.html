@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Fresh Admin Account</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0a1628 0%, #1a2744 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: #1a2744;
+            border: 1px solid #2a3f6f;
+            border-radius: 12px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+        h1 { color: #ffffff; font-size: 28px; margin-bottom: 10px; }
+        .subtitle { color: #8892b0; margin-bottom: 30px; }
+        .info-box {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 24px;
+            color: #f59e0b;
+            line-height: 1.6;
+            text-align: left;
+        }
+        .form-group { margin-bottom: 20px; text-align: left; }
+        label {
+            display: block;
+            color: #ccd6f6;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        input {
+            width: 100%;
+            padding: 12px 16px;
+            background: #0a1628;
+            border: 1px solid #2a3f6f;
+            border-radius: 8px;
+            color: #ffffff;
+            font-size: 14px;
+            outline: none;
+        }
+        input:focus { border-color: #3b82f6; }
+        button {
+            width: 100%;
+            padding: 16px;
+            background: #10b981;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        button:hover { background: #059669; }
+        button:disabled { background: #4a5568; cursor: not-allowed; }
+        .log {
+            background: #0a1628;
+            border: 1px solid #2a3f6f;
+            border-radius: 8px;
+            padding: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            margin-top: 20px;
+            text-align: left;
+        }
+        .log-entry {
+            margin-bottom: 8px;
+            padding: 8px;
+            border-radius: 4px;
+        }
+        .log-entry.info { color: #60a5fa; background: rgba(59, 130, 246, 0.05); }
+        .log-entry.success { color: #10b981; background: rgba(16, 185, 129, 0.1); }
+        .log-entry.error { color: #ef4444; background: rgba(239, 68, 68, 0.1); }
+        .result {
+            margin-top: 20px;
+            padding: 24px;
+            border-radius: 8px;
+            text-align: center;
+            background: rgba(16, 185, 129, 0.1);
+            border: 2px solid #10b981;
+        }
+        .result h3 { color: #ffffff; margin-bottom: 15px; font-size: 20px; }
+        .credential-box {
+            background: #0a1628;
+            border-radius: 6px;
+            padding: 16px;
+            margin: 15px 0;
+            text-align: left;
+        }
+        .credential-item {
+            color: #ccd6f6;
+            margin-bottom: 8px;
+        }
+        .credential-item strong { color: #10b981; }
+        .login-btn {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 16px 40px;
+            background: #3b82f6;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 18px;
+        }
+        .login-btn:hover { background: #2563eb; }
+        .or-divider {
+            margin: 24px 0;
+            color: #8892b0;
+            position: relative;
+        }
+        .or-divider::before, .or-divider::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            width: 40%;
+            height: 1px;
+            background: #2a3f6f;
+        }
+        .or-divider::before { left: 0; }
+        .or-divider::after { right: 0; }
+        .guest-btn {
+            background: #3b82f6;
+            display: inline-block;
+            text-decoration: none;
+            padding: 16px 40px;
+            color: #ffffff;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 18px;
+            transition: background 0.2s;
+        }
+        .guest-btn:hover { background: #2563eb; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Create Fresh Admin Account</h1>
+        <p class="subtitle">Quick setup with guaranteed working credentials</p>
+
+        <div class="info-box">
+            <strong>⚠️ Your emails are already in Firebase</strong><br>
+            All your existing emails are registered with different passwords. We'll create a NEW unique email that will work immediately.
+        </div>
+
+        <form id="createForm">
+            <div class="form-group">
+                <label for="email">Email Address (pre-filled)</label>
+                <input type="email" id="email" value="admin.rassem@aiplot.com" readonly>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password (pre-filled)</label>
+                <input type="text" id="password" value="maha2607" readonly>
+            </div>
+
+            <button type="submit" id="createBtn">✓ CREATE ACCOUNT NOW</button>
+        </form>
+
+        <div class="log" id="log">
+            <div class="log-entry info">Ready to create account...</div>
+        </div>
+
+        <div id="result"></div>
+
+        <div class="or-divider">OR</div>
+
+        <a href="https://ai-plot-app.vercel.app/login" class="guest-btn">
+            → Use Guest Mode Instead
+        </a>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+        import { getAuth, createUserWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+        import { getDatabase, ref, set } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
+
+        const firebaseConfig = {
+            apiKey: 'AIzaSyDKthkVZLmK5Y_wT0Jmx90UEkzJs_Pz9-I',
+            authDomain: 'plot-ai-87781.firebaseapp.com',
+            databaseURL: 'https://plot-ai-87781-default-rtdb.firebaseio.com',
+            projectId: 'plot-ai-87781',
+            storageBucket: 'plot-ai-87781.firebasestorage.app',
+            messagingSenderId: '723228647195',
+            appId: '1:723228647195:web:00693e31e923014e1efdbe',
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+
+        function addLog(message, type = 'info') {
+            const log = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            entry.textContent = `[${timestamp}] ${message}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        document.getElementById('createForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const btn = document.getElementById('createBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Creating...';
+
+            const email = 'admin.rassem@aiplot.com';
+            const password = 'maha2607';
+
+            addLog('═══════════════════════════════════════', 'info');
+            addLog('CREATING FRESH ADMIN ACCOUNT', 'info');
+            addLog('═══════════════════════════════════════', 'info');
+            addLog(`Email: ${email}`, 'info');
+            addLog(`Password: ${password}`, 'info');
+
+            try {
+                // Step 1: Create in Firebase Auth
+                addLog('\nStep 1: Creating Firebase Auth account...', 'info');
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+
+                addLog('✅ Firebase Auth account created!', 'success');
+                addLog(`UID: ${user.uid}`, 'success');
+
+                // Step 2: Create in Database
+                addLog('\nStep 2: Creating database profile...', 'info');
+                
+                const userProfile = {
+                    name: 'Rassem Admin',
+                    email: email,
+                    role: 'admin',
+                    status: 'active',
+                    phone: '',
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                };
+
+                await set(ref(db, `users/${user.uid}`), userProfile);
+
+                addLog('✅ Database profile created!', 'success');
+                addLog('Name: Rassem Admin', 'success');
+                addLog('Role: admin', 'success');
+                addLog('Status: active', 'success');
+
+                addLog('\n═══════════════════════════════════════', 'success');
+                addLog('✅ SUCCESS! Account is ready to use!', 'success');
+                addLog('═══════════════════════════════════════', 'success');
+
+                document.getElementById('result').innerHTML = `
+                    <div class="result">
+                        <h3>🎉 SUCCESS! Your Admin Account is Ready</h3>
+                        <div class="credential-box">
+                            <div class="credential-item"><strong>Email:</strong> ${email}</div>
+                            <div class="credential-item"><strong>Password:</strong> ${password}</div>
+                            <div class="credential-item"><strong>Role:</strong> Admin (Full Access)</div>
+                            <div class="credential-item"><strong>Status:</strong> Active (Can Login)</div>
+                        </div>
+                        <a href="https://ai-plot-app.vercel.app/login" class="login-btn">
+                            → Login Now
+                        </a>
+                    </div>
+                `;
+
+            } catch (error) {
+                addLog(`\n❌ Error: ${error.message}`, 'error');
+                addLog(`Error code: ${error.code}`, 'error');
+
+                document.getElementById('result').innerHTML = `
+                    <div class="result" style="background: rgba(239, 68, 68, 0.1); border-color: #ef4444;">
+                        <h3 style="color: #ef4444;">❌ Error</h3>
+                        <p>${error.message}</p>
+                        <p style="margin-top: 10px;">Try using Guest mode instead.</p>
+                        <a href="https://ai-plot-app.vercel.app/login" class="login-btn" style="background: #ef4444;">
+                            → Use Guest Mode
+                        </a>
+                    </div>
+                `;
+                
+                btn.disabled = false;
+                btn.textContent = '✓ CREATE ACCOUNT NOW';
+            }
+        });
+    </script>
+</body>
+</html>

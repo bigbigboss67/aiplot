@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clean Database & Setup Admin</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0a1628 0%, #1a2744 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: #1a2744;
+            border: 1px solid #2a3f6f;
+            border-radius: 12px;
+            padding: 40px;
+            max-width: 700px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+        h1 { color: #ffffff; font-size: 28px; margin-bottom: 10px; text-align: center; }
+        .subtitle { color: #8892b0; text-align: center; margin-bottom: 30px; }
+        .warning-box {
+            background: rgba(239, 68, 68, 0.1);
+            border: 2px solid #ef4444;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 24px;
+            color: #ef4444;
+            line-height: 1.6;
+        }
+        .warning-box strong { font-size: 18px; }
+        .step {
+            background: #0a1628;
+            border: 1px solid #2a3f6f;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+        .step h3 {
+            color: #ffffff;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .step-number {
+            background: #3b82f6;
+            color: #ffffff;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 700;
+        }
+        button {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 12px;
+        }
+        .btn-danger {
+            background: #ef4444;
+            color: #ffffff;
+        }
+        .btn-danger:hover { background: #dc2626; }
+        .btn-danger:disabled { background: #4a5568; cursor: not-allowed; }
+        .btn-success {
+            background: #10b981;
+            color: #ffffff;
+        }
+        .btn-success:hover { background: #059669; }
+        .btn-success:disabled { background: #4a5568; cursor: not-allowed; }
+        .log {
+            background: #0a1628;
+            border: 1px solid #2a3f6f;
+            border-radius: 8px;
+            padding: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            margin-top: 20px;
+        }
+        .log-entry { margin-bottom: 8px; padding: 8px; border-radius: 4px; }
+        .log-entry.info { color: #60a5fa; background: rgba(59, 130, 246, 0.05); }
+        .log-entry.success { color: #10b981; background: rgba(16, 185, 129, 0.1); }
+        .log-entry.error { color: #ef4444; background: rgba(239, 68, 68, 0.1); }
+        .log-entry.warning { color: #f59e0b; background: rgba(245, 158, 11, 0.1); }
+        .result {
+            margin-top: 20px;
+            padding: 24px;
+            border-radius: 8px;
+            text-align: center;
+            background: rgba(16, 185, 129, 0.1);
+            border: 2px solid #10b981;
+        }
+        .result h3 { color: #ffffff; margin-bottom: 15px; font-size: 20px; }
+        .credential-box {
+            background: #0a1628;
+            border-radius: 6px;
+            padding: 16px;
+            margin: 15px 0;
+            text-align: left;
+        }
+        .credential-item {
+            color: #ccd6f6;
+            margin-bottom: 8px;
+        }
+        .credential-item strong { color: #10b981; }
+        .login-btn {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 16px 40px;
+            background: #3b82f6;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 18px;
+        }
+        .login-btn:hover { background: #2563eb; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🗑️ Clean Database & Setup Super Admin</h1>
+        <p class="subtitle">Remove all old accounts and create fresh admin</p>
+
+        <div class="warning-box">
+            <strong>⚠️ WARNING: This will delete ALL data!</strong><br>
+            This will permanently remove all users, plots, CIS, leads, deals, and activities from the database. Only proceed if you want to start fresh!
+        </div>
+
+        <div class="step">
+            <h3><span class="step-number">1</span> Clean Database</h3>
+            <p style="color: #8892b0; margin-bottom: 16px;">Delete all existing data from the database</p>
+            <button class="btn-danger" onclick="cleanDatabase()" id="cleanBtn">
+                🗑️ DELETE ALL DATA
+            </button>
+        </div>
+
+        <div class="step">
+            <h3><span class="step-number">2</span> Create Super Admin</h3>
+            <p style="color: #8892b0; margin-bottom: 16px;">Create new admin with full permissions</p>
+            <button class="btn-success" onclick="createSuperAdmin()" id="adminBtn" disabled>
+                ✓ CREATE SUPER ADMIN
+            </button>
+        </div>
+
+        <div class="log" id="log">
+            <div class="log-entry info">Ready to clean and setup...</div>
+        </div>
+
+        <div id="result"></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+        import { getAuth, createUserWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+        import { getDatabase, ref, get, set, remove, update } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
+
+        const firebaseConfig = {
+            apiKey: 'AIzaSyDKthkVZLmK5Y_wT0Jmx90UEkzJs_Pz9-I',
+            authDomain: 'plot-ai-87781.firebaseapp.com',
+            databaseURL: 'https://plot-ai-87781-default-rtdb.firebaseio.com',
+            projectId: 'plot-ai-87781',
+            storageBucket: 'plot-ai-87781.firebasestorage.app',
+            messagingSenderId: '723228647195',
+            appId: '1:723228647195:web:00693e31e923014e1efdbe',
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+
+        function addLog(message, type = 'info') {
+            const log = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            entry.textContent = `[${timestamp}] ${message}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        window.cleanDatabase = async function() {
+            if (!confirm('⚠️ Are you SURE you want to delete ALL data? This cannot be undone!')) {
+                return;
+            }
+
+            const btn = document.getElementById('cleanBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Deleting...';
+
+            addLog('═══════════════════════════════════════', 'warning');
+            addLog('STARTING DATABASE CLEANUP', 'warning');
+            addLog('═══════════════════════════════════════', 'warning');
+
+            try {
+                const sections = ['users', 'plots', 'cis', 'leads', 'deals', 'activities', 'messages'];
+
+                for (const section of sections) {
+                    addLog(`Deleting ${section}...`, 'info');
+                    await remove(ref(db, section));
+                    addLog(`✅ ${section} deleted`, 'success');
+                }
+
+                addLog('\n═══════════════════════════════════════', 'success');
+                addLog('✅ DATABASE CLEANED SUCCESSFULLY!', 'success');
+                addLog('═══════════════════════════════════════', 'success');
+
+                // Enable next step
+                document.getElementById('adminBtn').disabled = false;
+                btn.textContent = '✅ DATABASE CLEANED';
+
+            } catch (error) {
+                addLog(`❌ Error: ${error.message}`, 'error');
+                btn.disabled = false;
+                btn.textContent = '🗑️ DELETE ALL DATA';
+            }
+        };
+
+        window.createSuperAdmin = async function() {
+            const btn = document.getElementById('adminBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Creating...';
+
+            const email = 'admin@aiplot.com';
+            const password = 'maha2607';
+
+            addLog('\n═══════════════════════════════════════', 'info');
+            addLog('CREATING SUPER ADMIN ACCOUNT', 'info');
+            addLog('═══════════════════════════════════════', 'info');
+            addLog(`Email: ${email}`, 'info');
+
+            try {
+                // Step 1: Create Firebase Auth account
+                addLog('\nStep 1: Creating Firebase Auth account...', 'info');
+                
+                let user;
+                try {
+                    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                    user = userCredential.user;
+                    addLog('✅ Firebase Auth account created!', 'success');
+                } catch (authError) {
+                    if (authError.code === 'auth/email-already-in-use') {
+                        addLog('Account already exists in Firebase Auth, using existing...', 'warning');
+                        // We'll just update the database profile
+                        const usersSnap = await get(ref(db, 'users'));
+                        if (usersSnap.exists()) {
+                            const users = usersSnap.val();
+                            for (const [uid, userData] of Object.entries(users)) {
+                                if (userData.email === email) {
+                                    user = { uid };
+                                    break;
+                                }
+                            }
+                        }
+                        if (!user) {
+                            throw new Error('Could not find existing user');
+                        }
+                    } else {
+                        throw authError;
+                    }
+                }
+
+                addLog(`UID: ${user.uid}`, 'success');
+
+                // Step 2: Create super admin profile with full permissions
+                addLog('\nStep 2: Creating super admin profile...', 'info');
+                
+                const superAdminProfile = {
+                    name: 'Super Admin',
+                    email: email,
+                    role: 'admin',
+                    status: 'active',
+                    phone: '',
+                    permissions: {
+                        manageUsers: true,
+                        manageAgents: true,
+                        manageRoles: true,
+                        managePermissions: true,
+                        managePlots: true,
+                        manageCIS: true,
+                        manageLeads: true,
+                        manageDeals: true,
+                        manageActivities: true,
+                        viewReports: true,
+                        deleteRecords: true,
+                        importData: true,
+                        exportData: true,
+                        systemSettings: true
+                    },
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                };
+
+                await set(ref(db, `users/${user.uid}`), superAdminProfile);
+
+                addLog('✅ Super admin profile created!', 'success');
+                addLog('Role: admin', 'success');
+                addLog('Status: active', 'success');
+                addLog('Permissions: ALL GRANTED', 'success');
+
+                addLog('\n═══════════════════════════════════════', 'success');
+                addLog('✅ SUCCESS! Super Admin is ready!', 'success');
+                addLog('═══════════════════════════════════════', 'success');
+
+                document.getElementById('result').innerHTML = `
+                    <div class="result">
+                        <h3>🎉 Super Admin Account Created!</h3>
+                        <div class="credential-box">
+                            <div class="credential-item"><strong>Email:</strong> ${email}</div>
+                            <div class="credential-item"><strong>Password:</strong> ${password}</div>
+                            <div class="credential-item"><strong>Role:</strong> Admin (Full Control)</div>
+                            <div class="credential-item"><strong>Permissions:</strong> ALL ENABLED</div>
+                            <div class="credential-item"><strong>Status:</strong> Active</div>
+                        </div>
+                        <p style="color: #8892b0; margin-top: 15px;">You now have FULL admin control including:</p>
+                        <ul style="color: #ccd6f6; margin-left: 20px; margin-top: 10px; line-height: 2;">
+                            <li>✓ Manage users and agents</li>
+                            <li>✓ Assign roles and permissions</li>
+                            <li>✓ Manage all CRM data</li>
+                            <li>✓ System settings</li>
+                            <li>✓ Import/Export data</li>
+                        </ul>
+                        <a href="https://ai-plot-app.vercel.app/login" class="login-btn">
+                            → Login Now
+                        </a>
+                    </div>
+                `;
+
+                btn.textContent = '✅ SUPER ADMIN CREATED';
+
+            } catch (error) {
+                addLog(`\n❌ Error: ${error.message}`, 'error');
+                document.getElementById('result').innerHTML = `
+                    <div class="result" style="background: rgba(239, 68, 68, 0.1); border-color: #ef4444;">
+                        <h3 style="color: #ef4444;">❌ Error</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+                btn.disabled = false;
+                btn.textContent = '✓ CREATE SUPER ADMIN';
+            }
+        };
+    </script>
+</body>
+</html>
