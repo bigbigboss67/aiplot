@@ -772,7 +772,8 @@ const DataStore = {
 
     init() {
         this.loadFromStorage();
-        
+        this.repairDataLinks();
+
         // Try to sync with Firebase if online
         if (isOnline && firebaseDB) {
             this.syncFromFirebase();
@@ -790,6 +791,7 @@ const DataStore = {
             if (data) {
                 this.cis = Object.values(data);
                 UI.refreshCISTable();
+                UI.refreshDashboard();
             }
         });
 
@@ -797,7 +799,10 @@ const DataStore = {
             const data = snapshot.val();
             if (data) {
                 this.leads = Object.values(data);
+                this.repairDataLinks();
                 UI.refreshLeadsTable();
+                UI.refreshCISTable();
+                UI.refreshDashboard();
             }
         });
 
@@ -806,6 +811,7 @@ const DataStore = {
             if (data) {
                 this.deals = Object.values(data);
                 UI.refreshDealsTable();
+                UI.refreshDashboard();
             }
         });
 
@@ -815,6 +821,7 @@ const DataStore = {
                 this.plots = Object.values(data);
                 UI.refreshPlotsTable();
                 UI.refreshMap();
+                UI.refreshDashboard();
             }
         });
     },
@@ -905,6 +912,22 @@ const DataStore = {
         ];
 
         this.saveToStorage();
+    },
+
+    // Repair broken CIS<->Lead links caused by old bug that wiped leadId on CIS edit
+    repairDataLinks() {
+        let repaired = false;
+        this.leads.forEach(lead => {
+            if (lead.cisId) {
+                const cis = this.cis.find(c => c.id === lead.cisId);
+                if (cis && cis.leadId !== lead.id) {
+                    cis.leadId = lead.id;
+                    if (!cis.conversionDate) cis.conversionDate = lead.date;
+                    repaired = true;
+                }
+            }
+        });
+        if (repaired) this.saveToStorage();
     },
 
     // CIS Operations
