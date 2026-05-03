@@ -556,14 +556,54 @@
                     }
                 }
 
-                // Fallback to demo users
-                const user = demoUsers.find(u => u.email === email && u.password === password && u.status === 'active');
-                
+                // Fallback 1: demo users (hardcoded)
+                let user = demoUsers.find(u => u.email === email && u.password === password && u.status === 'active');
+
+                // Fallback 2: lookup user in Firebase Realtime Database (for users registered through admin portal)
+                if (!user && db) {
+                    try {
+                        const usersSnap = await db.ref('users').once('value');
+                        const usersData = usersSnap.val() || {};
+                        const matches = Object.entries(usersData).filter(([uid, u]) => u && u.email === email);
+
+                        if (matches.length > 0) {
+                            const [uid, dbUser] = matches[0];
+                            const isActive = dbUser.status === 'active' || dbUser.status === 'approved';
+
+                            if (!isActive) {
+                                showAlert('Your account is not active. Status: ' + (dbUser.status || 'unknown') + '. Please contact administrator.', 'error');
+                                return;
+                            }
+
+                            // If user has a stored password, verify it
+                            if (dbUser.password) {
+                                if (dbUser.password === password) {
+                                    user = { email: dbUser.email, name: dbUser.name, role: dbUser.role, status: dbUser.status, uid: uid };
+                                } else {
+                                    showAlert('Invalid password for ' + email + '. Please try again.', 'error');
+                                    return;
+                                }
+                            } else {
+                                // First-time login: store the password they typed (auto-provision pattern)
+                                // Only allowed for already-active accounts created by admin
+                                console.log('🔑 First-time login for ' + email + ', setting password');
+                                await db.ref('users/' + uid + '/password').set(password);
+                                await db.ref('users/' + uid + '/passwordSetAt').set(new Date().toISOString());
+                                user = { email: dbUser.email, name: dbUser.name, role: dbUser.role, status: dbUser.status, uid: uid };
+                                showAlert('Password set on first login. Welcome!', 'info');
+                            }
+                        }
+                    } catch (dbErr) {
+                        console.error('Database fallback error:', dbErr);
+                    }
+                }
+
                 if (user) {
                     const session = {
                         email: user.email,
                         name: user.name,
                         role: user.role,
+                        uid: user.uid || null,
                         firebaseAuth: false
                     };
 
@@ -574,7 +614,7 @@
                     }
 
                     showAlert('Login successful! Redirecting...', 'success');
-                    
+
                     setTimeout(() => {
                         window.location.href = 'index.html';
                     }, 1000);
