@@ -496,6 +496,7 @@
 
   function openModal() {
     injectStyles();
+    // Always start with a clean slate — no leftover data from a previous read.
     let parsedPlots = [];
 
     const overlay = document.createElement('div');
@@ -506,8 +507,8 @@
         <p class="pi-sub">Upload a file or paste data. Supported: <b>.xlsx, .xls, .csv, .tsv, .txt, .pdf</b>.</p>
 
         <div class="pi-section">
-          <h3>📂 Upload file</h3>
-          <input type="file" class="pi-file" accept=".xlsx,.xls,.csv,.tsv,.txt,.pdf" />
+          <h3>📂 Upload file(s) — you can select multiple at once</h3>
+          <input type="file" class="pi-file" multiple accept=".xlsx,.xls,.csv,.tsv,.txt,.pdf" />
         </div>
 
         <div class="pi-section">
@@ -554,16 +555,43 @@
     };
 
     $('.pi-file').addEventListener('change', async (e) => {
-      const file = e.target.files && e.target.files[0];
-      if (!file) return;
-      showResult(`Parsing <b>${file.name}</b>…`, true);
-      try {
-        const result = await parseFile(file);
-        showParsed(result, file.name);
-      } catch (err) {
-        showResult(`Failed to parse <b>${file.name}</b>: ${err.message}`, false);
-        console.error('[plot-import] parseFile error', err);
+      const files = e.target.files ? Array.from(e.target.files) : [];
+      if (!files.length) return;
+      const labels = files.map(f => f.name).join(', ');
+      showResult(`Parsing <b>${files.length} file${files.length === 1 ? '' : 's'}</b>: ${labels}…`, true);
+
+      const allPlots = [];
+      let totalSkipped = 0;
+      const failures = [];
+
+      for (const file of files) {
+        try {
+          const result = await parseFile(file);
+          if (result && result.plots) allPlots.push(...result.plots);
+          if (result && result.skipped) totalSkipped += result.skipped;
+        } catch (err) {
+          console.error('[plot-import] parseFile error', file.name, err);
+          failures.push(`${file.name}: ${err.message}`);
+        }
       }
+
+      const sourceLabel = files.length === 1
+        ? files[0].name
+        : `${files.length} files (${labels})`;
+
+      // Reset previous results before showing new ones — fixes leftover data
+      // from a prior file selection persisting in the preview.
+      parsedPlots = [];
+
+      if (failures.length) {
+        showResult(
+          `Parsed ${allPlots.length} plot(s) from ${sourceLabel}. ` +
+          `<br><small>⚠️ ${failures.length} file(s) failed: ${failures.join('; ')}</small>`,
+          allPlots.length > 0
+        );
+      }
+
+      showParsed({ plots: allPlots, skipped: totalSkipped }, sourceLabel);
     });
 
     $('.pi-process-text').addEventListener('click', () => {
