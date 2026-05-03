@@ -769,6 +769,7 @@ const DataStore = {
     deals: [],
     plots: [],
     activities: [],
+    _fbLoaded: { cis: false, leads: false },
 
     init() {
         this.loadFromStorage();
@@ -782,6 +783,12 @@ const DataStore = {
         }
     },
 
+    _repairAndRefresh() {
+        if (!this._fbLoaded.cis || !this._fbLoaded.leads) return;
+        this.repairDataLinks();
+        UI.refreshAll();
+    },
+
     syncFromFirebase() {
         if (!firebaseDB) return;
         
@@ -790,8 +797,8 @@ const DataStore = {
             const data = snapshot.val();
             if (data) {
                 this.cis = Object.values(data);
-                if (UI.currentPage === 'cis') UI.refreshCISTable();
-                if (UI.currentPage === 'dashboard') UI.refreshDashboard();
+                this._fbLoaded.cis = true;
+                this._repairAndRefresh();
             }
         });
 
@@ -799,8 +806,8 @@ const DataStore = {
             const data = snapshot.val();
             if (data) {
                 this.leads = Object.values(data);
-                if (UI.currentPage === 'leads') UI.refreshLeadsTable();
-                if (UI.currentPage === 'dashboard') UI.refreshDashboard();
+                this._fbLoaded.leads = true;
+                this._repairAndRefresh();
             }
         });
 
@@ -808,8 +815,7 @@ const DataStore = {
             const data = snapshot.val();
             if (data) {
                 this.deals = Object.values(data);
-                if (UI.currentPage === 'deals') UI.refreshDealsTable();
-                if (UI.currentPage === 'dashboard') UI.refreshDashboard();
+                UI.refreshAll();
             }
         });
 
@@ -817,8 +823,7 @@ const DataStore = {
             const data = snapshot.val();
             if (data) {
                 this.plots = Object.values(data);
-                if (UI.currentPage === 'plots') { UI.refreshPlotsTable(); UI.refreshMap(); }
-                if (UI.currentPage === 'dashboard') UI.refreshDashboard();
+                UI.refreshAll();
             }
         });
     },
