@@ -790,8 +790,8 @@ const DataStore = {
             const data = snapshot.val();
             if (data) {
                 this.cis = Object.values(data);
-                UI.refreshCISTable();
-                UI.refreshDashboard();
+                if (UI.currentPage === 'cis') UI.refreshCISTable();
+                if (UI.currentPage === 'dashboard') UI.refreshDashboard();
             }
         });
 
@@ -799,10 +799,8 @@ const DataStore = {
             const data = snapshot.val();
             if (data) {
                 this.leads = Object.values(data);
-                this.repairDataLinks();
-                UI.refreshLeadsTable();
-                UI.refreshCISTable();
-                UI.refreshDashboard();
+                if (UI.currentPage === 'leads') UI.refreshLeadsTable();
+                if (UI.currentPage === 'dashboard') UI.refreshDashboard();
             }
         });
 
@@ -810,8 +808,8 @@ const DataStore = {
             const data = snapshot.val();
             if (data) {
                 this.deals = Object.values(data);
-                UI.refreshDealsTable();
-                UI.refreshDashboard();
+                if (UI.currentPage === 'deals') UI.refreshDealsTable();
+                if (UI.currentPage === 'dashboard') UI.refreshDashboard();
             }
         });
 
@@ -819,9 +817,8 @@ const DataStore = {
             const data = snapshot.val();
             if (data) {
                 this.plots = Object.values(data);
-                UI.refreshPlotsTable();
-                UI.refreshMap();
-                UI.refreshDashboard();
+                if (UI.currentPage === 'plots') { UI.refreshPlotsTable(); UI.refreshMap(); }
+                if (UI.currentPage === 'dashboard') UI.refreshDashboard();
             }
         });
     },
