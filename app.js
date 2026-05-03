@@ -916,18 +916,27 @@ const DataStore = {
         this.saveToStorage();
     },
 
-    // Repair broken CIS<->Lead links caused by old bug that wiped leadId on CIS edit
+    // Repair broken CIS<->Lead links and sync diverged field values
     repairDataLinks() {
         let repaired = false;
+        const sharedFields = ['name', 'phone', 'email', 'nationality', 'budget', 'plotType', 'location', 'source', 'notes'];
         this.leads.forEach(lead => {
-            if (lead.cisId) {
-                const cis = this.cis.find(c => c.id === lead.cisId);
-                if (cis && cis.leadId !== lead.id) {
-                    cis.leadId = lead.id;
-                    if (!cis.conversionDate) cis.conversionDate = lead.date;
+            if (!lead.cisId) return;
+            const cis = this.cis.find(c => c.id === lead.cisId);
+            if (!cis) return;
+            // Restore broken leadId on CIS
+            if (cis.leadId !== lead.id) {
+                cis.leadId = lead.id;
+                if (!cis.conversionDate) cis.conversionDate = lead.date;
+                repaired = true;
+            }
+            // Sync shared fields: CIS is source of truth
+            sharedFields.forEach(field => {
+                if (cis[field] !== undefined && cis[field] !== lead[field]) {
+                    lead[field] = cis[field];
                     repaired = true;
                 }
-            }
+            });
         });
         if (repaired) this.saveToStorage();
     },
