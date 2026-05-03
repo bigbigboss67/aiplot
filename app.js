@@ -1221,7 +1221,7 @@ const UI = {
                 addAgentBtn.style.display = 'block';
             }
         }
-        else if (page === 'admin') refreshAdminUsersTable();
+        else if (page === 'admin') { refreshAdminUsersTable(); if (typeof refreshPendingApprovals === 'function') refreshPendingApprovals(); }
     },
 
     refreshAll() {
