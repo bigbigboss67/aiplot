@@ -1848,9 +1848,13 @@ function saveCIS() {
         status: document.getElementById('cis-status').value,
         notes: document.getElementById('cis-notes').value,
         createLead: document.getElementById('cis-create-lead').value,
-        leadId: '',
-        conversionDate: ''
     };
+
+    // Preserve existing leadId and conversionDate when editing
+    if (!id) {
+        data.leadId = '';
+        data.conversionDate = '';
+    }
 
     if (!data.name) {
         alert('Name is required!');
@@ -1860,12 +1864,26 @@ function saveCIS() {
     let cis;
     if (id) {
         cis = DataStore.updateCIS(id, data);
+        // Sync shared fields to linked lead if one exists
+        if (cis && cis.leadId) {
+            DataStore.updateLead(cis.leadId, {
+                name: cis.name,
+                phone: cis.phone,
+                email: cis.email,
+                nationality: cis.nationality,
+                budget: cis.budget,
+                plotType: cis.plotType,
+                location: cis.location,
+                source: cis.source,
+                notes: cis.notes
+            });
+        }
     } else {
         cis = DataStore.addCIS(data);
     }
 
-    // Auto-create lead if requested
-    if (data.createLead === 'YES' && cis) {
+    // Auto-create lead if requested (only for new records)
+    if (data.createLead === 'YES' && cis && !id) {
         createLeadFromCIS(cis);
     }
 
@@ -2008,6 +2026,20 @@ function saveLead() {
     let lead;
     if (id) {
         lead = DataStore.updateLead(id, data);
+        // Sync shared fields back to linked CIS if one exists
+        if (lead && lead.cisId) {
+            DataStore.updateCIS(lead.cisId, {
+                name: lead.name,
+                phone: lead.phone,
+                email: lead.email,
+                nationality: lead.nationality,
+                budget: lead.budget,
+                plotType: lead.plotType,
+                location: lead.location,
+                source: lead.source,
+                notes: lead.notes
+            });
+        }
         Tracker.addActivity('status_change', `Lead ${lead.id} Updated`, `Status: ${data.status}`, lead.id, 'lead');
     } else {
         lead = DataStore.addLead(data);
