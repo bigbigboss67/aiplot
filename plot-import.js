@@ -277,6 +277,20 @@
       plots.push(plot);
     }
 
+    // Fallback: if the strict parser found nothing, try the universal parser
+    // exposed by admin-enhancements.js (handles arbitrary PDF shapes)
+    if (plots.length === 0 && typeof window.universalPlotParse === 'function') {
+      try {
+        const universalPlots = window.universalPlotParse(text);
+        if (universalPlots && universalPlots.length > 0) {
+          console.log('[plot-import] universal parser found ' + universalPlots.length + ' plot(s)');
+          return { plots: universalPlots, skipped: 0 };
+        }
+      } catch (e) {
+        console.warn('[plot-import] universal parser failed:', e);
+      }
+    }
+
     return { plots, skipped: 0 };
   }
 
