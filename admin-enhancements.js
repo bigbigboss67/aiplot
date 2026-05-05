@@ -675,6 +675,75 @@
   }
 
   // --------------------------------------------------------------------------
+  // 8b. v3 Auto-cleanup: remove orphan/non-real-estate plots that pollute
+  //     DataStore.plots. The "AI Plot" project has a sample chart plot
+  //     (id=plot-1) with dataPoints/scatter that crashes refreshPlotsTable
+  //     because plot.status.toLowerCase() throws on the missing status.
+  // --------------------------------------------------------------------------
+
+  function cleanupOrphanPlots() {
+    if (typeof DataStore === 'undefined' || !Array.isArray(DataStore.plots)) return 0;
+    if (window.__orphanPlotsCleanedV3) return 0;
+
+    const before = DataStore.plots.length;
+    const orphans = [];
+    DataStore.plots = DataStore.plots.filter(p => {
+      // Real-estate plots have at least one of: plotNo, development, district, totalPrice, size
+      // AND should have a real-estate-shaped status (string or undefined)
+      const isOrphan =
+        !p ||
+        // Has scatter/chart shape from non-real-estate code
+        (p.dataPoints && Array.isArray(p.dataPoints)) ||
+        (p.plotType === 'scatter' || p.plotType === 'line' || p.plotType === 'bar') ||
+        // Has no status AND no real-estate fields
+        (!p.status && !p.plotNo && !p.development && !p.district);
+
+      if (isOrphan) {
+        orphans.push(p && p.id);
+      }
+      return !isOrphan;
+    });
+
+    if (orphans.length > 0) {
+      console.warn('[admin-enhancements v3] Removed ' + orphans.length + ' orphan plot(s) from DataStore:', orphans);
+
+      // Persist the cleanup
+      try { if (DataStore.saveToStorage) DataStore.saveToStorage(); } catch (e) {}
+
+      // Also remove from Firebase
+      if (typeof firebase !== 'undefined' && firebase.database) {
+        orphans.forEach(id => {
+          if (id) {
+            firebase.database().ref('plots/' + id).remove().catch(() => {});
+          }
+        });
+      }
+    }
+
+    // Also normalize status on any plot that has it but in lowercase
+    let normalizedCount = 0;
+    DataStore.plots.forEach(p => {
+      if (p && typeof p.status === 'string') {
+        const s = p.status.toLowerCase();
+        if (s === 'available' && p.status !== 'Available') { p.status = 'Available'; normalizedCount++; }
+        else if (s === 'sold' && p.status !== 'Sold') { p.status = 'Sold'; normalizedCount++; }
+        else if (s === 'reserved' && p.status !== 'Reserved') { p.status = 'Reserved'; normalizedCount++; }
+      } else if (p && !p.status) {
+        p.status = 'Available';
+        normalizedCount++;
+      }
+    });
+
+    if (normalizedCount > 0) {
+      console.log('[admin-enhancements v3] Normalized status on ' + normalizedCount + ' plot(s)');
+      try { if (DataStore.saveToStorage) DataStore.saveToStorage(); } catch (e) {}
+    }
+
+    window.__orphanPlotsCleanedV3 = true;
+    return orphans.length;
+  }
+
+  // --------------------------------------------------------------------------
   // 9. Helpers
   // --------------------------------------------------------------------------
 
@@ -714,6 +783,7 @@
       installPlotImportOCREnhancement();
       patchGetStatsForCaseInsensitive();
       installPeriodicKPIRefresh();
+      cleanupOrphanPlots();
       ensurePasswordChangeUI();
 
       const adminPage = document.getElementById('admin-page');
