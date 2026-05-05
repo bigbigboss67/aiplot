@@ -388,34 +388,56 @@
       return parsePastedText(text);
     }
     if (name.endsWith('.pdf')) {
-      // Use PDF.js — the portal already loads it on demand via ensurePdfJsLoaded()
-      if (typeof window.ensurePdfJsLoaded === 'function') {
-        await window.ensurePdfJsLoaded();
-      }
-      if (typeof pdfjsLib === 'undefined') {
-        throw new Error('PDF.js is not available on this page.');
-      }
-      const buf = await readFile(file, true);
-      const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+      // v3: prefer the hybrid OCR-capable reader from admin-enhancements.js
+      // so image-based / scanned PDFs also yield text.
       let allText = '';
-      for (let p = 1; p <= pdf.numPages; p++) {
-        const page = await pdf.getPage(p);
-        const tc = await page.getTextContent();
-        // Reconstruct text with line breaks based on Y-position changes
-        let lastY = null;
-        let line = '';
-        const lines = [];
-        for (const item of tc.items) {
-          const y = item.transform[5];
-          if (lastY != null && Math.abs(y - lastY) > 2) {
-            lines.push(line.trim());
-            line = '';
-          }
-          line += (line ? ' ' : '') + item.str;
-          lastY = y;
+      if (typeof window.readPDFWithOCR === 'function') {
+        try {
+          const result = await window.readPDFWithOCR(file, (msg) => {
+            console.log('[plot-import]', msg);
+          });
+          allText = result.text || '';
+          console.log('[plot-import] PDF read: ' + result.pages + ' pages, '
+            + result.textPages + ' text-extracted, ' + result.ocrPages + ' OCR\'d, '
+            + allText.length + ' chars');
+        } catch (e) {
+          console.warn('[plot-import] OCR reader failed, falling back to plain text reader:', e);
         }
-        if (line.trim()) lines.push(line.trim());
-        allText += lines.join('\n') + '\n';
+      }
+
+      // Fallback: plain pdf.js text extraction
+      if (!allText) {
+        if (typeof window.ensurePdfJsLoaded === 'function') {
+          await window.ensurePdfJsLoaded();
+        }
+        if (typeof pdfjsLib === 'undefined') {
+          throw new Error('PDF.js is not available on this page.');
+        }
+        const buf = await readFile(file, true);
+        const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+        for (let p = 1; p <= pdf.numPages; p++) {
+          const page = await pdf.getPage(p);
+          const tc = await page.getTextContent();
+          let lastY = null;
+          let line = '';
+          const lines = [];
+          for (const item of tc.items) {
+            const y = item.transform[5];
+            if (lastY != null && Math.abs(y - lastY) > 2) {
+              lines.push(line.trim());
+              line = '';
+            }
+            line += (line ? ' ' : '') + item.str;
+            lastY = y;
+          }
+          if (line.trim()) lines.push(line.trim());
+          allText += lines.join('\n') + '\n';
+        }
+      }
+
+      console.log('[plot-import] extracted text length:', allText.length);
+      if (allText.length === 0) {
+        throw new Error('Could not extract any text from this PDF. The file may be empty or corrupt.');
       }
       return parsePDFText(allText);
     }
