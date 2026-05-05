@@ -1,7 +1,16 @@
 /**
- * admin-enhancements.js  (v3 — May 5, 2026)
+ * admin-enhancements.js  (v3.2 — May 5, 2026)
  * ----------------------------------------------------------------------------
- * AI Plot Portal — Admin Enhancements & Bug Fixes (v3)
+ * AI Plot Portal — Admin Enhancements & Bug Fixes (v3.2)
+ *
+ * v3.2 changes (on top of v3.1):
+ *   - FIX: Plot rows are now clickable (click anywhere → opens edit form)
+ *   - FIX: Smart Area Research panel no longer blocks the edit form
+ *          (lowered z-index to 1900, repositioned as side panel)
+ *   - FIX: Admin users now see an "ADMIN" badge next to their name
+ *
+ * v3.1 changes:
+ *   - FIX: Auto-cleanup orphan/non-real-estate plots that crash refreshPlotsTable
  *
  * v3 changes (on top of v2):
  *   - FIX: Plot status case mismatch — KPIs now count both 'available' and
@@ -744,6 +753,115 @@
   }
 
   // --------------------------------------------------------------------------
+  // 8c. v3.2: Make plot rows clickable for editing
+  // --------------------------------------------------------------------------
+
+  function installPlotRowClickability() {
+    // Use event delegation on document so it survives table re-renders
+    if (window.__plotRowsClickable) return;
+    window.__plotRowsClickable = true;
+
+    document.addEventListener('click', function(e) {
+      // Only intercept clicks inside the plots tbody
+      const tbody = e.target.closest('#plots-tbody');
+      if (!tbody) return;
+      // Skip if user clicked something interactive (button, checkbox, link, action)
+      if (e.target.closest('button, input, a, .btn-action, [onclick]')) return;
+      const row = e.target.closest('tr');
+      if (!row) return;
+      // Find the edit button within this row to extract plot ID
+      const editBtn = row.querySelector('button[onclick^="editPlot"]');
+      if (!editBtn) return;
+      const onclickStr = editBtn.getAttribute('onclick') || '';
+      const m = onclickStr.match(/editPlot\(['"]([^'"]+)['"]\)/);
+      if (m && m[1] && typeof window.editPlot === 'function') {
+        window.editPlot(m[1]);
+      }
+    });
+
+    // Also keep adding cursor:pointer to rows whenever the table re-renders
+    const styleRow = function() {
+      const tbody = document.getElementById('plots-tbody');
+      if (!tbody) return;
+      Array.from(tbody.querySelectorAll('tr')).forEach(tr => {
+        if (tr.style.cursor !== 'pointer') tr.style.cursor = 'pointer';
+        if (!tr.title) tr.title = 'Click to edit this plot';
+      });
+    };
+    styleRow();
+    // Re-apply when DOM changes
+    const obs = new MutationObserver(styleRow);
+    const tbody = document.getElementById('plots-tbody');
+    if (tbody) obs.observe(tbody, { childList: true });
+
+    console.log('[admin-enhancements v3.2] Plot rows are now clickable to edit');
+  }
+
+  // --------------------------------------------------------------------------
+  // 8d. v3.2: Stop the Smart Area Research panel from blocking the edit form
+  //     The original panel has z-index 10000 (higher than plot-modal's 2000),
+  //     so it covers the form. We lower it to 1900 and reposition it as a
+  //     side panel rather than a centered overlay.
+  // --------------------------------------------------------------------------
+
+  function fixAreaResearchPanelLayer() {
+    if (window.__areaResearchPanelFixed) return;
+    window.__areaResearchPanelFixed = true;
+
+    const apply = function() {
+      const research = document.getElementById('plot-area-research');
+      const modal = document.getElementById('plot-modal');
+      if (!research) return;
+
+      // Always lower z-index so it never covers the edit modal
+      research.style.zIndex = '1900';
+
+      // If modal is currently active, reposition the research as a side panel
+      if (modal && modal.classList.contains('active') && research.style.display !== 'none') {
+        research.style.position = 'fixed';
+        research.style.top = '80px';
+        research.style.right = '20px';
+        research.style.left = 'auto';
+        research.style.transform = 'none';
+        research.style.width = 'min(360px, 90vw)';
+        research.style.maxWidth = '360px';
+        research.style.maxHeight = '60vh';
+        research.style.boxShadow = '0 10px 40px rgba(0,0,0,0.2)';
+      }
+    };
+
+    apply();
+
+    const obs = new MutationObserver(apply);
+    obs.observe(document.body, {
+      attributes: true, subtree: true, attributeFilter: ['style', 'class']
+    });
+
+    console.log('[admin-enhancements v3.2] Area research panel repositioned, z-index lowered');
+  }
+
+  // --------------------------------------------------------------------------
+  // 8e. v3.2: Add ADMIN badge to user-info display so admins see their role
+  // --------------------------------------------------------------------------
+
+  function addAdminBadgeToUserInfo() {
+    const userInfo = document.getElementById('user-info');
+    if (!userInfo) return;
+    if (userInfo.querySelector('.admin-badge-marker')) return;
+    if (!Auth || !Auth.currentUser) return;
+    if (Auth.currentUser.role !== 'admin') return;
+
+    const adminMark = document.createElement('span');
+    adminMark.className = 'admin-badge-marker';
+    adminMark.style.cssText =
+      'margin-left:6px;background:linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);' +
+      'color:#fff;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;' +
+      'letter-spacing:0.5px;text-transform:uppercase;display:inline-block;';
+    adminMark.textContent = 'Admin';
+    userInfo.appendChild(adminMark);
+  }
+
+  // --------------------------------------------------------------------------
   // 9. Helpers
   // --------------------------------------------------------------------------
 
@@ -784,6 +902,9 @@
       patchGetStatsForCaseInsensitive();
       installPeriodicKPIRefresh();
       cleanupOrphanPlots();
+      installPlotRowClickability();
+      fixAreaResearchPanelLayer();
+      addAdminBadgeToUserInfo();
       ensurePasswordChangeUI();
 
       const adminPage = document.getElementById('admin-page');
