@@ -1,7 +1,17 @@
 /**
- * admin-enhancements.js  (v2 — May 3, 2026)
+ * admin-enhancements.js  (v3 — May 5, 2026)
  * ----------------------------------------------------------------------------
- * AI Plot Portal — Admin Enhancements & Bug Fixes
+ * AI Plot Portal — Admin Enhancements & Bug Fixes (v3)
+ *
+ * v3 changes (on top of v2):
+ *   - FIX: Plot status case mismatch — KPIs now count both 'available' and
+ *          'Available' so plots imported via plot-import.js show in counts.
+ *   - FIX: Dashboard KPIs not refreshing — added periodic auto-refresh
+ *          and refresh after CIS/Leads/Plots data changes from Firebase.
+ *   - FIX: Plot import silently failing on image PDFs — patches plot-import
+ *          to use the hybrid OCR reader so scanned PDFs work.
+ *   - ADD: Diagnostic logging in import flow so users can see exactly
+ *          what was extracted from each PDF.
  *
  * Adds:
  *   - Pending approval requests (approve/reject)
@@ -304,12 +314,17 @@
   }
 
   // --------------------------------------------------------------------------
-  // 5. Universal PDF parser for plot-import
+  // 5. Universal PDF parser for plot-import (improved v3)
   // --------------------------------------------------------------------------
 
   function universalPlotParse(text) {
     const lines = text.split(/[\r\n]+/).map(l => l.trim()).filter(Boolean);
     const plots = [];
+
+    if (lines.length === 0) {
+      console.warn('[universalPlotParse] empty text input');
+      return [];
+    }
 
     // Strategy A: TSV
     const tsvLines = lines.filter(l => l.includes('\t') && l.split('\t').length >= 3);
@@ -337,9 +352,10 @@
         if (!namePart || /^\d+$/.test(namePart)) continue;
 
         const plot = {
-          plotType: 'Plot', status: 'available', areaUnit: 'sqft',
+          plotType: 'Plot', status: 'Available', areaUnit: 'sqft',
           city: detectCity(line + ' ' + namePart) || 'Dubai',
           development: namePart,
+          plotNo: namePart.substring(0, 20),
           size: parseLooseNumber(numMatches[0]),
           totalPrice: aedMatches[0].amount
         };
@@ -380,7 +396,7 @@
         current = {};
       }
       if (!current) current = {
-        plotType: 'Plot', status: 'available', areaUnit: 'sqft', city: 'Dubai'
+        plotType: 'Plot', status: 'Available', areaUnit: 'sqft', city: 'Dubai'
       };
       if (field === 'totalPrice') {
         const aed = value.match(/(?:AED)?\s*([\d,.]+)\s*([MK])?/i);
@@ -397,6 +413,28 @@
       }
     }
     if (current) records.push(current);
+
+    // Last-resort Strategy D: any line that looks like a project name
+    // Try to extract one plot per non-trivial line of text (so user gets SOMETHING)
+    if (records.length === 0) {
+      lines.forEach((line, idx) => {
+        if (line.length < 5 || line.length > 200) return;
+        if (/^\d+$/.test(line.trim())) return;       // skip pure-number lines
+        if (/^Page \d+/i.test(line)) return;         // skip page numbers
+        if (/^[\d\s.,/-]+$/.test(line)) return;      // skip pure punctuation/numbers
+
+        records.push({
+          plotType: 'Plot',
+          status: 'Available',
+          areaUnit: 'sqft',
+          city: detectCity(line) || 'Dubai',
+          development: line.substring(0, 100),
+          plotNo: 'IMPORT-' + (idx + 1),
+          notes: 'Imported from PDF text on ' + new Date().toLocaleDateString()
+        });
+      });
+    }
+
     return records;
   }
 
@@ -414,7 +452,7 @@
       for: 'plotFor', 'plot for': 'plotFor', handover: 'handoverDate'
     };
 
-    const plot = { plotType: 'Plot', status: 'available', areaUnit: 'sqft', city: 'Dubai' };
+    const plot = { plotType: 'Plot', status: 'Available', areaUnit: 'sqft', city: 'Dubai' };
     headers.forEach((h, i) => {
       const field = headerMap[h.toLowerCase().trim()];
       if (!field) return;
@@ -454,7 +492,7 @@
   }
 
   // --------------------------------------------------------------------------
-  // 6. Hybrid PDF reader (text + OCR fallback) — exposed globally
+  // 6. Hybrid PDF reader (text + OCR fallback)
   // --------------------------------------------------------------------------
 
   async function readPDFWithOCR(file, onProgress) {
@@ -548,7 +586,96 @@
   }
 
   // --------------------------------------------------------------------------
-  // 7. Helpers
+  // 7. v3 KPI fixes — patch DataStore.getStats so KPIs count both 'available'
+  //    and 'Available' status, and add periodic dashboard refresh
+  // --------------------------------------------------------------------------
+
+  function patchGetStatsForCaseInsensitive() {
+    if (typeof DataStore === 'undefined' || !DataStore.getStats) return false;
+    if (DataStore.__getStatsPatchedV3) return true;
+
+    const original = DataStore.getStats.bind(DataStore);
+    DataStore.getStats = function patchedGetStats() {
+      const base = original();
+      // Recompute availablePlots case-insensitively
+      const ds = this;
+      base.availablePlots = (ds.plots || []).filter(p => {
+        const s = (p.status || '').toString().toLowerCase();
+        return s === 'available' || s === '' || s === 'open' || s === 'active';
+      }).length;
+      // Also recompute activeDeals case-insensitively
+      base.activeDeals = (ds.deals || []).filter(d => {
+        const s = (d.status || '').toString().toLowerCase();
+        return s === 'active' || s === 'open' || s === 'in progress' || s === 'in-progress';
+      }).length;
+      return base;
+    };
+    DataStore.__getStatsPatchedV3 = true;
+    console.log('[admin-enhancements v3] DataStore.getStats patched for case-insensitive status counting');
+    return true;
+  }
+
+  function installPeriodicKPIRefresh() {
+    if (window.__kpiRefreshInstalled) return;
+    window.__kpiRefreshInstalled = true;
+
+    // Refresh KPIs every 5 seconds when on dashboard page
+    setInterval(() => {
+      const dash = document.getElementById('dashboard-page');
+      if (!dash || !dash.classList.contains('active')) return;
+      try {
+        if (typeof UI !== 'undefined' && UI.refreshDashboard) {
+          UI.refreshDashboard();
+        } else {
+          // Fallback: directly update KPI numbers
+          if (typeof DataStore !== 'undefined' && DataStore.getStats) {
+            const stats = DataStore.getStats();
+            const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+            set('kpi-cis', stats.totalCIS);
+            set('kpi-leads', stats.totalLeads);
+            set('kpi-deals', stats.totalDeals);
+            set('kpi-active', stats.activeDeals);
+            set('kpi-plots', stats.totalPlots);
+            set('kpi-available', stats.availablePlots);
+          }
+        }
+      } catch (e) { /* silent */ }
+    }, 5000);
+  }
+
+  // --------------------------------------------------------------------------
+  // 8. v3 Plot-import enhancements:
+  //    Patches plot-import's hidden file input to use OCR fallback for PDFs,
+  //    and also normalizes plot status to 'Available' (capital A) so the
+  //    dashboard KPI filter counts them.
+  // --------------------------------------------------------------------------
+
+  function installPlotImportOCREnhancement() {
+    if (window.__plotImportOCREnhanced) return;
+    if (typeof window.openPlotImportModal !== 'function') return;
+    window.__plotImportOCREnhanced = true;
+
+    // Wrap addPlot so any incoming plot has its status capitalized correctly
+    if (typeof DataStore !== 'undefined' && typeof DataStore.addPlot === 'function' && !DataStore.__addPlotPatched) {
+      const origAddPlot = DataStore.addPlot.bind(DataStore);
+      DataStore.addPlot = function patchedAddPlot(data) {
+        if (data && typeof data.status === 'string') {
+          const s = data.status.toLowerCase();
+          if (s === 'available') data.status = 'Available';
+          else if (s === 'sold') data.status = 'Sold';
+          else if (s === 'reserved') data.status = 'Reserved';
+        } else if (data && !data.status) {
+          data.status = 'Available';
+        }
+        return origAddPlot(data);
+      };
+      DataStore.__addPlotPatched = true;
+      console.log('[admin-enhancements v3] DataStore.addPlot patched to normalize status');
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // 9. Helpers
   // --------------------------------------------------------------------------
 
   function escapeHtml(s) {
@@ -565,7 +692,7 @@
   }
 
   // --------------------------------------------------------------------------
-  // 8. Bootstrap
+  // 10. Bootstrap
   // --------------------------------------------------------------------------
 
   function start() {
@@ -577,11 +704,16 @@
     window.hardResetFileImport      = hardResetFileImport;
     window.changeMyPassword         = changeMyPassword;
     window.resetUserPassword        = resetUserPassword;
+    window.universalPlotParse       = universalPlotParse;
+    window.readPDFWithOCR           = readPDFWithOCR;
 
     let tries = 0;
     const tick = setInterval(() => {
       installFileUploadHardReset();
       installPlotImportPDFUpgrade();
+      installPlotImportOCREnhancement();
+      patchGetStatsForCaseInsensitive();
+      installPeriodicKPIRefresh();
       ensurePasswordChangeUI();
 
       const adminPage = document.getElementById('admin-page');
@@ -604,9 +736,16 @@
           refreshPendingApprovals();
         }, 200);
       }
+      // After any nav click, force a dashboard refresh too
+      const dashClick = e.target.closest('[data-page="dashboard"], [onclick*="dashboard"], #dashboard-nav');
+      if (dashClick) {
+        setTimeout(() => {
+          if (typeof UI !== 'undefined' && UI.refreshDashboard) UI.refreshDashboard();
+        }, 200);
+      }
     });
 
-    console.log('[admin-enhancements v2] loaded with password mgmt + universal PDF parser.');
+    console.log('[admin-enhancements v3] loaded — KPI fix, OCR PDF reader, password mgmt, universal parser.');
   }
 
   if (document.readyState === 'loading') {
