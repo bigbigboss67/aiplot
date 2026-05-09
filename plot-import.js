@@ -665,8 +665,10 @@
           try { DataStore.saveToStorage(); } catch (e) {}
         }
         if (typeof UI !== 'undefined') {
-          if (UI.refreshPlotsTable) UI.refreshPlotsTable();
-          if (UI.refreshDashboard)  UI.refreshDashboard();
+          if (UI.refreshPlotsTable)       UI.refreshPlotsTable();
+          if (UI.refreshPlotsStats)       UI.refreshPlotsStats();
+          if (UI.renderPlotsPageMarkers)  UI.renderPlotsPageMarkers();
+          if (UI.refreshDashboard)        UI.refreshDashboard();
           if (UI.showToast) UI.showToast(`Imported ${ok} plot${ok === 1 ? '' : 's'}${fail ? ` (${fail} failed)` : ''}`);
         }
         showResult(`✅ Imported ${ok} plot${ok === 1 ? '' : 's'}${fail ? `, ${fail} failed (see console)` : ''}.`, !fail);
