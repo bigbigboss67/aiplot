@@ -1063,7 +1063,12 @@ const DataStore = {
     updatePlot(id, data) {
         const index = this.plots.findIndex(p => p.id === id);
         if (index !== -1) {
-            this.plots[index] = { ...this.plots[index], ...data };
+            const existing = this.plots[index];
+            const merged = { ...existing, ...data };
+            // Keep existing coords if new ones are missing/zero
+            if (!merged.lat || merged.lat === 0) merged.lat = existing.lat || (25.05 + Math.random() * 0.25);
+            if (!merged.lng || merged.lng === 0) merged.lng = existing.lng || (55.05 + Math.random() * 0.35);
+            this.plots[index] = merged;
             this.saveToStorage();
             return this.plots[index];
         }
@@ -1198,9 +1203,10 @@ const UI = {
     refreshPlotsStats() {
         const plots = DataStore.plots;
         const total = plots.length;
-        const available = plots.filter(p => p.status === 'Available').length;
-        const reserved  = plots.filter(p => p.status === 'Reserved').length;
-        const totalVal  = plots.reduce((sum, p) => sum + (parseFloat(p.price) || 0), 0);
+        const st = s => (s || '').toLowerCase();
+        const available = plots.filter(p => st(p.status) === 'available').length;
+        const reserved  = plots.filter(p => st(p.status) === 'reserved').length;
+        const totalVal  = plots.reduce((sum, p) => sum + (parseFloat(p.totalPrice || p.price) || 0), 0);
 
         const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
         set('stat-total-plots',    total);
@@ -1307,7 +1313,7 @@ const UI = {
                         .map(([k, v]) => `<tr><td style="padding:2px 6px 2px 0;color:#666;white-space:nowrap;">${k}</td><td style="padding:2px 0;font-weight:500;">${v}</td></tr>`)
                         .join('')}
                 </table>
-                ${plot.price ? `<hr style="margin:6px 0;border-color:#eee;"><strong style="color:#2563eb;">AED ${Number(plot.price).toLocaleString()}</strong>` : ''}
+                ${(plot.totalPrice || plot.price) ? `<hr style="margin:6px 0;border-color:#eee;"><strong style="color:#2563eb;">AED ${Number(plot.totalPrice || plot.price).toLocaleString()}</strong>` : ''}
             </div>`;
     },
 
@@ -1325,6 +1331,8 @@ const UI = {
         const statusCls = (plot.status||'').toLowerCase() === 'available' ? 'p2-status-available' :
                           (plot.status||'').toLowerCase() === 'reserved'  ? 'p2-status-reserved'  : 'p2-status-sold';
 
+        const _price = plot.totalPrice || plot.price;
+        const _priceGfa = plot.priceGfa || plot.pricePerGFA;
         const rows = [
             ['City', plot.city], ['District', plot.district], ['Development', plot.development],
             ['Zone', plot.zone], ['Type', plot.type||plot.plotType], ['For', plot.plotFor],
@@ -1336,8 +1344,8 @@ const UI = {
             ['Handover', plot.handover||plot.handoverDate],
             ['Owner', plot.ownerName], ['Owner Tel', plot.ownerPhone],
             ['Agent', plot.agentName], ['Agent Tel', plot.agentPhone],
-            ['Price', plot.price ? 'AED '+Number(plot.price).toLocaleString() : null],
-            ['Price/GFA', plot.pricePerGFA ? 'AED '+Number(plot.pricePerGFA).toLocaleString() : null]
+            ['Price', _price ? 'AED '+Number(_price).toLocaleString() : null],
+            ['Price/GFA', _priceGfa ? 'AED '+Number(_priceGfa).toFixed(2) : null]
         ].filter(([,v]) => v && v !== '-');
 
         const svUrl = (plot.lat && plot.lng)
@@ -1393,6 +1401,8 @@ const UI = {
         const statusCls = (plot.status||'').toLowerCase() === 'available' ? 'p2-status-available' :
                           (plot.status||'').toLowerCase() === 'reserved'  ? 'p2-status-reserved'  : 'p2-status-sold';
 
+        const _p = plot.totalPrice || plot.price;
+        const _pg = plot.priceGfa || plot.pricePerGFA;
         const fields = [
             ['Plot No', plot.plotNo], ['City', plot.city], ['District', plot.district],
             ['Development', plot.development], ['Zone', plot.zone],
@@ -1403,13 +1413,13 @@ const UI = {
             ['View', plot.view], ['Status', `<span class="p2-status-badge ${statusCls}">${plot.status||'-'}</span>`],
             ['Handover', plot.handover || plot.handoverDate],
             ['Source', plot.source], ['Linked Deal', plot.linkedDeal],
-            ['Price', plot.price ? 'AED ' + Number(plot.price).toLocaleString() : null],
-            ['Price/GFA', plot.pricePerGFA ? 'AED ' + Number(plot.pricePerGFA).toLocaleString() : null],
+            ['Price', _p ? 'AED ' + Number(_p).toLocaleString() : null],
+            ['Price/GFA', _pg ? 'AED ' + Number(_pg).toFixed(2) : null],
             ['Owner', plot.ownerName], ['Owner Phone', plot.ownerPhone],
             ['Owner Email', plot.ownerEmail], ['Owner Nationality', plot.ownerNationality],
             ['Agent Name', plot.agentName], ['Agent Phone', plot.agentPhone],
             ['Agent Email', plot.agentEmail], ['Agent Nationality', plot.agentNationality],
-            ['Website', plot.websiteUrl], ['Notes', plot.notes]
+            ['Website', plot.website || plot.websiteUrl], ['Notes', plot.notes]
         ].filter(([, v]) => v && v !== '-');
 
         if (body) body.innerHTML = fields.map(([k, v]) =>
@@ -1935,7 +1945,10 @@ const UI = {
         const countBadge = document.getElementById('plots-count-badge');
         if (countBadge) countBadge.textContent = source.length;
 
-        const statusClass = s => s === 'Available' ? '' : s === 'Reserved' ? ' reserved' : s === 'Sold' ? ' sold' : '';
+        const statusClass = s => {
+            const l = (s || '').toLowerCase();
+            return l === 'available' ? '' : l === 'reserved' ? ' reserved' : l === 'sold' ? ' sold' : '';
+        };
         let idx = 0;
         tbody.innerHTML = source.map(plot => `
             <tr onclick="UI.showPlotDetailPanel('${plot.id}')" data-plot-id="${plot.id}">

@@ -123,9 +123,9 @@
   function rowToPlot(row) {
     const plot = {
       plotType: 'Plot',
-      status: 'available',
+      status: 'Available',
       areaUnit: 'sqft',
-      city: 'Dubai',          // sensible default for AI Plot Portal (Dubai market)
+      city: 'Dubai',
     };
     const noteParts = [];
 
@@ -247,7 +247,7 @@
 
       const plot = {
         plotType: 'Plot',
-        status: 'available',
+        status: 'Available',
         areaUnit: 'sqft',
         city: 'Dubai',
         development: development.trim(),
@@ -651,6 +651,10 @@
       try {
         let ok = 0, fail = 0;
         for (const p of parsedPlots) {
+          // Normalize field aliases before saving
+          if (p.totalPrice && !p.price) p.price = p.totalPrice;
+          if (p.priceGfa && !p.pricePerGFA) p.pricePerGFA = p.priceGfa;
+          if (!p.status) p.status = 'Available';
           try { await DataStore.addPlot(p); ok++; }
           catch (e) { console.error('[plot-import] addPlot failed', e, p); fail++; }
         }
