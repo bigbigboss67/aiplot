@@ -1184,6 +1184,200 @@ const UI = {
         this.renderPlotMarkers();
     },
 
+    // ── PLOTS PAGE ENHANCEMENTS ────────────────────────────────────────────
+
+    plotsPageMap: null,
+    plotsPageMarkers: [],
+
+    refreshPlotsStats() {
+        const plots = DataStore.plots;
+        const total = plots.length;
+        const available = plots.filter(p => p.status === 'Available').length;
+        const reserved  = plots.filter(p => p.status === 'Reserved').length;
+        const totalVal  = plots.reduce((sum, p) => sum + (parseFloat(p.price) || 0), 0);
+
+        const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+        set('stat-total-plots',    total);
+        set('stat-available-plots', available);
+        set('stat-reserved-plots',  reserved);
+        set('stat-total-value', totalVal >= 1e6
+            ? 'AED ' + (totalVal / 1e6).toFixed(1) + 'M'
+            : totalVal >= 1e3
+                ? 'AED ' + (totalVal / 1e3).toFixed(0) + 'K'
+                : 'AED ' + totalVal.toLocaleString());
+        const badge = document.getElementById('plots-count-badge');
+        if (badge) badge.textContent = total;
+    },
+
+    initPlotsPageMap() {
+        const container = document.getElementById('plots-page-map');
+        if (!container) return;
+
+        if (this.plotsPageMap) {
+            this.plotsPageMap.invalidateSize();
+            this.renderPlotsPageMarkers();
+            return;
+        }
+
+        this.plotsPageMap = L.map('plots-page-map').setView([25.1254, 55.1800], 11);
+
+        // Satellite imagery layer
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri', maxZoom: 19
+        }).addTo(this.plotsPageMap);
+
+        // Labels overlay layer
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 19, opacity: 0.8
+        }).addTo(this.plotsPageMap);
+
+        this.renderPlotsPageMarkers();
+    },
+
+    renderPlotsPageMarkers() {
+        if (!this.plotsPageMap) return;
+
+        this.plotsPageMarkers.forEach(m => this.plotsPageMap.removeLayer(m));
+        this.plotsPageMarkers = [];
+
+        const bounds = [];
+        DataStore.plots.forEach(plot => {
+            if (!plot.lat || !plot.lng) return;
+
+            const statusClass = (plot.status || 'available').toLowerCase();
+            const icon = L.divIcon({
+                className: 'custom-marker',
+                html: `<div class="marker-pin ${statusClass}" title="${plot.plotNo}">${plot.plotNo}</div>`,
+                iconSize: [36, 42], iconAnchor: [18, 42], popupAnchor: [0, -44]
+            });
+
+            const marker = L.marker([plot.lat, plot.lng], { icon })
+                .addTo(this.plotsPageMap)
+                .bindPopup(this._buildMapPopup(plot), { maxWidth: 320 });
+
+            // Click → update the map info card on the right
+            marker.on('click', () => this.showPlotOnMapCard(plot));
+
+            this.plotsPageMarkers.push(marker);
+            bounds.push([plot.lat, plot.lng]);
+        });
+
+        if (bounds.length > 1) this.plotsPageMap.fitBounds(bounds, { padding: [40, 40] });
+        else if (bounds.length === 1) this.plotsPageMap.setView(bounds[0], 14);
+    },
+
+    _buildMapPopup(plot) {
+        const statusColor = { Available: '#10b981', Reserved: '#f59e0b', Sold: '#ef4444' };
+        const color = statusColor[plot.status] || '#94a3b8';
+        return `
+            <div style="min-width:220px;font-family:sans-serif;font-size:13px;">
+                <strong style="font-size:15px;color:#111;">${plot.plotNo || plot.id}</strong>
+                <span style="margin-left:8px;padding:2px 8px;border-radius:99px;background:${color}22;color:${color};font-size:11px;font-weight:600;">${plot.status}</span>
+                <hr style="margin:6px 0;border-color:#eee;">
+                <table style="width:100%;border-collapse:collapse;">
+                    ${[['City', plot.city], ['District', plot.district], ['Development', plot.development],
+                       ['Zone', plot.zone], ['Type', plot.plotType], ['For', plot.plotFor],
+                       ['Zoning', plot.zoning], ['GFA', plot.gfa], ['NFA', plot.nfa],
+                       ['BUA', plot.bua], ['FAR', plot.far], ['Height', plot.height],
+                       ['Size', plot.size], ['View', plot.view]]
+                        .filter(([, v]) => v && v !== '-')
+                        .map(([k, v]) => `<tr><td style="padding:2px 6px 2px 0;color:#666;white-space:nowrap;">${k}</td><td style="padding:2px 0;font-weight:500;">${v}</td></tr>`)
+                        .join('')}
+                </table>
+                ${plot.price ? `<hr style="margin:6px 0;border-color:#eee;"><strong style="color:#2563eb;">AED ${Number(plot.price).toLocaleString()}</strong>` : ''}
+            </div>`;
+    },
+
+    showPlotOnMapCard(plot) {
+        const body = document.getElementById('plots-map-card-body');
+        if (!body) return;
+
+        const statusClass = (plot.status || '').toLowerCase();
+        const rows = [
+            ['City', plot.city], ['District', plot.district], ['Development', plot.development],
+            ['Zone', plot.zone], ['Type', plot.plotType], ['For', plot.plotFor],
+            ['Zoning', plot.zoning], ['GFA', plot.gfa], ['NFA', plot.nfa],
+            ['BUA', plot.bua], ['FAR', plot.far], ['Height', plot.height],
+            ['Size', plot.size], ['View', plot.view], ['Handover', plot.handoverDate]
+        ].filter(([, v]) => v && v !== '-');
+
+        body.innerHTML = `
+            <div class="plots-map-card-body">
+                <p class="plots-map-card-plotno">${plot.plotNo || plot.id}</p>
+                <span class="plots-map-card-badge ${statusClass}">${plot.status || '-'}</span>
+                <div class="plots-map-card-rows">
+                    ${rows.map(([k, v]) => `
+                        <div class="plots-map-card-row">
+                            <span class="plots-map-card-key">${k}</span>
+                            <span class="plots-map-card-val">${v}</span>
+                        </div>`).join('')}
+                </div>
+                ${plot.price ? `<hr class="plots-map-card-divider"><p class="plots-map-card-price">AED ${Number(plot.price).toLocaleString()}</p>` : ''}
+            </div>
+            <div class="plots-map-card-footer">
+                <button class="plots-map-card-btn" onclick="editPlot('${plot.id}')" title="Edit"><i class="fas fa-edit"></i></button>
+                <button class="plots-map-card-btn" onclick="openSendToModal('plots','${plot.id}','${plot.plotNo}')" title="Send"><i class="fas fa-paper-plane"></i></button>
+                <button class="plots-map-card-btn" onclick="window.print()" title="Print"><i class="fas fa-print"></i></button>
+                <button class="plots-map-card-btn delete" onclick="deletePlot('${plot.id}')" title="Delete"><i class="fas fa-trash"></i></button>
+            </div>`;
+    },
+
+    showPlotDetailPanel(plotId) {
+        const plot = DataStore.plots.find(p => p.id === plotId);
+        if (!plot) return;
+
+        // Highlight selected row
+        document.querySelectorAll('#plots-tbody tr').forEach(tr => tr.classList.remove('plots-row-selected'));
+        const rows = document.querySelectorAll(`#plots-tbody tr`);
+        rows.forEach(tr => {
+            const cb = tr.querySelector('input[type=checkbox]');
+            if (cb && cb.dataset.id === plotId) tr.classList.add('plots-row-selected');
+        });
+
+        const empty   = document.getElementById('plots-detail-empty');
+        const content = document.getElementById('plots-detail-content');
+        const plotNo  = document.getElementById('plots-detail-plotno');
+        const badge   = document.getElementById('plots-detail-status-badge');
+        const body    = document.getElementById('plots-detail-body');
+        const btnEdit   = document.getElementById('plots-detail-edit');
+        const btnSend   = document.getElementById('plots-detail-send');
+        const btnPrint  = document.getElementById('plots-detail-print');
+        const btnDelete = document.getElementById('plots-detail-delete');
+
+        if (!content) return;
+        if (empty)   empty.style.display = 'none';
+        content.style.display = 'block';
+
+        if (plotNo) plotNo.textContent = plot.plotNo || plot.id;
+        if (badge) {
+            badge.textContent  = plot.status || '-';
+            badge.className    = 'plots-detail-badge badge-' + (plot.status || '').toLowerCase();
+        }
+
+        const rows2 = [
+            ['City', plot.city], ['District', plot.district], ['Development', plot.development],
+            ['Zone', plot.zone], ['Plot Type', plot.plotType], ['Plot For', plot.plotFor],
+            ['Zoning', plot.zoning], ['GFA', plot.gfa], ['NFA', plot.nfa],
+            ['BUA', plot.bua], ['FAR', plot.far], ['Height', plot.height],
+            ['Size', plot.size], ['View', plot.view], ['Handover', plot.handoverDate]
+        ].filter(([, v]) => v && v !== '-');
+
+        if (body) body.innerHTML = rows2.map(([k, v]) => `
+            <div class="plots-detail-row">
+                <span class="plots-detail-key">${k}</span>
+                <span class="plots-detail-val">${v}</span>
+            </div>`).join('') +
+            (plot.price ? `<hr class="plots-detail-sep"><p class="plots-detail-price">AED ${Number(plot.price).toLocaleString()}</p>` : '');
+
+        if (btnEdit)   btnEdit.onclick   = () => editPlot(plotId);
+        if (btnSend)   btnSend.onclick   = () => openSendToModal('plots', plotId, plot.plotNo);
+        if (btnPrint)  btnPrint.onclick  = () => window.print();
+        if (btnDelete) btnDelete.onclick = () => deletePlot(plotId);
+    },
+
+    // ── Global helpers (called from HTML) ─────────────────────────────────
+
+
     setupNavigation() {
         document.querySelectorAll('.nav-item').forEach(item => {
             item.addEventListener('click', (e) => {
@@ -1245,7 +1439,11 @@ const UI = {
         else if (page === 'cis') this.refreshCISTable(globalSearchFilter ? globalSearchFilter.cis : null);
         else if (page === 'leads') this.refreshLeadsTable(globalSearchFilter ? globalSearchFilter.leads : null);
         else if (page === 'deals') this.refreshDealsTable(globalSearchFilter ? globalSearchFilter.deals : null);
-        else if (page === 'plots') this.refreshPlotsTable(globalSearchFilter ? globalSearchFilter.plots : null);
+        else if (page === 'plots') {
+            this.refreshPlotsTable(globalSearchFilter ? globalSearchFilter.plots : null);
+            this.refreshPlotsStats();
+            setTimeout(() => this.initPlotsPageMap(), 150);
+        }
         else if (page === 'followup') this.refreshFollowUpTable();
         else if (page === 'agent-portal') {
             Auth.loadAgentDashboard();
@@ -1674,9 +1872,13 @@ const UI = {
     refreshPlotsTable(data) {
         const source = data || DataStore.plots;
         const tbody = document.getElementById('plots-tbody');
+        // Update badge count
+        const countBadge = document.getElementById('plots-count-badge');
+        if (countBadge) countBadge.textContent = source.length;
+
         tbody.innerHTML = source.map(plot => `
-            <tr>
-                <td><input type="checkbox" data-id="${plot.id}" onchange="toggleItemSelection('plots', '${plot.id}', this.checked)"></td>
+            <tr onclick="UI.showPlotDetailPanel('${plot.id}')" class="">
+                <td onclick="event.stopPropagation()"><input type="checkbox" data-id="${plot.id}" onchange="toggleItemSelection('plots', '${plot.id}', this.checked)"></td>
                 <td><span class="badge badge-${plot.status.toLowerCase()}">${plot.id}</span></td>
                 <td><strong>${plot.plotNo}</strong></td>
                 <td>${plot.city || '-'}</td>
@@ -2836,6 +3038,8 @@ function _refreshActiveTable(page) {
         UI.refreshDealsTable(globalSearchFilter ? globalSearchFilter.deals : null);
     } else if (current === 'plots') {
         UI.refreshPlotsTable(globalSearchFilter ? globalSearchFilter.plots : null);
+        UI.refreshPlotsStats();
+        UI.renderPlotsPageMarkers && UI.renderPlotsPageMarkers();
     }
 }
 
@@ -3305,6 +3509,80 @@ function deleteDeal(id) {
         UI.refreshDashboard();
         UI.showToast('Deal deleted successfully!');
     }
+}
+
+// ── Plots Page View Functions ──────────────────────────────────────────────
+
+function switchPlotsView(view) {
+    const mapView  = document.getElementById('plots-map-view');
+    const listView = document.getElementById('plots-list-view');
+    const mapBtn   = document.getElementById('plots-map-btn');
+    const listBtn  = document.getElementById('plots-list-btn');
+
+    if (view === 'map') {
+        if (mapView)  mapView.style.display  = 'block';
+        if (listView) listView.style.display = 'none';
+        if (mapBtn)   mapBtn.classList.add('active');
+        if (listBtn)  listBtn.classList.remove('active');
+        // Init / refresh map
+        setTimeout(() => UI.initPlotsPageMap(), 100);
+    } else {
+        if (mapView)  mapView.style.display  = 'none';
+        if (listView) listView.style.display = 'block';
+        if (listBtn)  listBtn.classList.add('active');
+        if (mapBtn)   mapBtn.classList.remove('active');
+    }
+}
+
+function filterPlotsTable(query) {
+    const q = (query || '').toLowerCase();
+    const rows = document.querySelectorAll('#plots-tbody tr');
+    rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(q) ? '' : 'none';
+    });
+}
+
+function printPlotsTable() {
+    window.print();
+}
+
+function exportPlotsCSV() {
+    const plots = DataStore.plots;
+    if (!plots.length) { alert('No plots to export.'); return; }
+
+    const headers = ['ID','Plot No','City','District','Development','Zone','Plot Type',
+                     'Plot For','Zoning','GFA','NFA','BUA','FAR','Height','Size','View',
+                     'Status','Handover','Price'];
+    const rows = plots.map(p => [
+        p.id, p.plotNo, p.city, p.district, p.development, p.zone,
+        p.plotType, p.plotFor, p.zoning, p.gfa, p.nfa, p.bua,
+        p.far, p.height, p.size, p.view, p.status, p.handoverDate, p.price
+    ].map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','));
+
+    const csv  = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a    = document.createElement('a');
+    a.href     = URL.createObjectURL(blob);
+    a.download = 'plots.csv';
+    a.click();
+}
+
+function closePlotDetail() {
+    const empty   = document.getElementById('plots-detail-empty');
+    const content = document.getElementById('plots-detail-content');
+    if (empty)   empty.style.display   = '';
+    if (content) content.style.display = 'none';
+    document.querySelectorAll('#plots-tbody tr').forEach(tr => tr.classList.remove('plots-row-selected'));
+}
+
+function clearMapSelection() {
+    const body = document.getElementById('plots-map-card-body');
+    if (body) body.innerHTML = `
+        <div class="plots-map-card-empty">
+            <i class="fas fa-map-marker-alt"></i>
+            <p>Click a pin on the map to see plot details</p>
+        </div>`;
 }
 
 // Plot Functions
@@ -3786,6 +4064,8 @@ function savePlot() {
 
     closeModal('plot-modal');
     UI.refreshPlotsTable();
+    UI.refreshPlotsStats();
+    UI.renderPlotsPageMarkers && UI.renderPlotsPageMarkers();
     UI.refreshDashboard();
     UI.showToast(id ? 'Plot updated successfully!' : 'Plot created successfully!');
 }
@@ -3917,6 +4197,10 @@ function deletePlot(id) {
         console.log('Deleting plot...');
         DataStore.deletePlot(id);
         UI.refreshPlotsTable();
+        UI.refreshPlotsStats();
+        UI.renderPlotsPageMarkers && UI.renderPlotsPageMarkers();
+        closePlotDetail();
+        clearMapSelection();
         UI.refreshDashboard();
         UI.showToast('Plot deleted successfully!');
         console.log('Plot deleted');

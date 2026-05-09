@@ -733,62 +733,189 @@
 
             <!-- Plots Page -->
             <div class="page" id="plots-page">
-                <div class="breadcrumb-nav">
-                    <a href="#" onclick="navigateTo('dashboard'); return false;" class="breadcrumb-item">
-                        <i class="fas fa-home"></i> Home
-                    </a>
-                    <span class="breadcrumb-separator">/</span>
-                    <span class="breadcrumb-item active">Plots</span>
-                </div>
-                <div class="page-toolbar">
-                    <button class="btn-primary" onclick="openPlotModal()">
-                        <i class="fas fa-plus"></i>
-                        Add New Plot
-                    </button>
-                    <button class="btn-danger" id="bulk-delete-plots" onclick="bulkDelete('plots')" style="display:none;">
-                        <i class="fas fa-trash"></i>
-                        Delete Selected (<span id="selected-plots-count">0</span>)
-                    </button>
-                </div>
-                <div class="card">
-                    <div class="table-container">
-                        <table class="data-table" id="plots-table">
-                            <thead>
-                                <tr>
-                                    <th><input type="checkbox" id="select-all-plots" onchange="toggleSelectAll('plots')"></th>
-                                    <th>Plot ID</th>
-                                    <th>Plot No</th>
-                                    <th>City</th>
-                                    <th>District</th>
-                                    <th>Development</th>
-                                    <th>Zone</th>
-                                    <th>Plot Type</th>
-                                    <th>Plot For</th>
-                                    <th>Zoning</th>
-                                    <th>GFA</th>
-                                    <th>NFA</th>
-                                    <th>BUA</th>
-                                    <th>FAR</th>
-                                    <th>Height</th>
-                                    <th>Size</th>
-                                    <th>View</th>
-                                    <th>Status</th>
-                                    <th>Handover</th>
-                                    <th>Files</th>
-                                    <th>Send To</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="plots-tbody">
-                                <!-- Plot records will be populated here -->
-                            </tbody>
-                        </table>
+                <!-- ── HERO SECTION ── -->
+                <div class="plots-hero">
+                    <div class="plots-hero-bg"></div>
+                    <div class="plots-hero-orb"></div>
+                    <div class="plots-hero-inner">
+                        <!-- Top bar: title + action buttons -->
+                        <div class="plots-hero-topbar">
+                            <div class="plots-hero-brand">
+                                <div class="plots-hero-icon"><i class="fas fa-map-marked-alt"></i></div>
+                                <div>
+                                    <h2 class="plots-hero-title">Plot Management</h2>
+                                    <p class="plots-hero-subtitle">DUBAI AI PORTAL</p>
+                                </div>
+                            </div>
+                            <div class="plots-hero-actions">
+                                <!-- Map / List toggle -->
+                                <div class="plots-view-toggle">
+                                    <button id="plots-map-btn" class="plots-toggle-btn" onclick="switchPlotsView('map')">
+                                        <i class="fas fa-map"></i> Map
+                                    </button>
+                                    <button id="plots-list-btn" class="plots-toggle-btn active" onclick="switchPlotsView('list')">
+                                        All Plots (<span id="plots-count-badge">0</span>)
+                                    </button>
+                                </div>
+                                <button class="plots-btn-secondary" onclick="openPlotImportFromCIS()">
+                                    <i class="fas fa-file-import"></i> Import Plots
+                                </button>
+                                <button class="plots-btn-primary" onclick="openPlotModal()">
+                                    <i class="fas fa-plus"></i> Add New Plot
+                                </button>
+                                <button id="bulk-delete-plots" class="plots-btn-danger" onclick="bulkDelete('plots')" style="display:none;">
+                                    <i class="fas fa-trash"></i> Delete (<span id="selected-plots-count">0</span>)
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Tagline -->
+                        <div class="plots-hero-tagline">
+                            <span class="plots-portal-badge">Dubai Real Estate Portal</span>
+                            <h1 class="plots-main-heading">AI-Powered Plot<br>Management in Dubai</h1>
+                            <p class="plots-tagline-desc">Manage plots intelligently with AI search, real-time map binding, and professional reporting.</p>
+                        </div>
+
+                        <!-- Stats cards -->
+                        <div class="plots-stats-grid">
+                            <div class="plots-stat-card" onclick="switchPlotsView('list')">
+                                <div>
+                                    <p class="plots-stat-label">Total Plots</p>
+                                    <p class="plots-stat-value" id="stat-total-plots">0</p>
+                                </div>
+                                <div class="plots-stat-icon"><i class="fas fa-map-marked-alt"></i></div>
+                            </div>
+                            <div class="plots-stat-card">
+                                <div>
+                                    <p class="plots-stat-label">Available</p>
+                                    <p class="plots-stat-value" id="stat-available-plots">0</p>
+                                </div>
+                                <div class="plots-stat-icon green"><i class="fas fa-check-circle"></i></div>
+                            </div>
+                            <div class="plots-stat-card">
+                                <div>
+                                    <p class="plots-stat-label">Reserved</p>
+                                    <p class="plots-stat-value" id="stat-reserved-plots">0</p>
+                                </div>
+                                <div class="plots-stat-icon amber"><i class="fas fa-star"></i></div>
+                            </div>
+                            <div class="plots-stat-card">
+                                <div>
+                                    <p class="plots-stat-label">Total Value</p>
+                                    <p class="plots-stat-value" id="stat-total-value">AED 0</p>
+                                </div>
+                                <div class="plots-stat-icon blue"><i class="fas fa-dollar-sign"></i></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                
-                <!-- Professional Ad Boxes - 2 Column Layout -->
+
+                <!-- ── MAP VIEW ── -->
+                <div id="plots-map-view" class="plots-view" style="display:none;">
+                    <div class="plots-map-layout">
+                        <!-- Map -->
+                        <div class="plots-map-container">
+                            <div id="plots-page-map" class="plots-page-map"></div>
+                        </div>
+                        <!-- Map info card -->
+                        <div class="plots-map-card">
+                            <div class="plots-map-card-header">
+                                <i class="fas fa-info-circle"></i> Plot Details
+                                <button class="plots-map-card-close" onclick="clearMapSelection()" title="Clear selection">&times;</button>
+                            </div>
+                            <div id="plots-map-card-body">
+                                <div class="plots-map-card-empty">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    <p>Click a pin on the map to see plot details</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── LIST VIEW ── -->
+                <div id="plots-list-view" class="plots-view">
+                    <!-- Toolbar: search + export -->
+                    <div class="plots-list-toolbar">
+                        <div class="plots-search-wrap">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="plots-search-input" placeholder="Search plots..." oninput="filterPlotsTable(this.value)">
+                        </div>
+                        <div class="plots-list-actions">
+                            <button class="plots-action-btn" onclick="printPlotsTable()">
+                                <i class="fas fa-print"></i> Print All
+                            </button>
+                            <button class="plots-action-btn" onclick="exportPlotsCSV()">
+                                <i class="fas fa-download"></i> Export CSV
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Table + detail panel -->
+                    <div class="plots-list-layout">
+                        <!-- Table -->
+                        <div class="plots-table-wrap">
+                            <div class="table-container">
+                                <table class="data-table" id="plots-table">
+                                    <thead>
+                                        <tr>
+                                            <th><input type="checkbox" id="select-all-plots" onchange="toggleSelectAll('plots')"></th>
+                                            <th>Plot ID</th>
+                                            <th>Plot No</th>
+                                            <th>City</th>
+                                            <th>District</th>
+                                            <th>Development</th>
+                                            <th>Zone</th>
+                                            <th>Plot Type</th>
+                                            <th>Plot For</th>
+                                            <th>Zoning</th>
+                                            <th>GFA</th>
+                                            <th>NFA</th>
+                                            <th>BUA</th>
+                                            <th>FAR</th>
+                                            <th>Height</th>
+                                            <th>Size</th>
+                                            <th>View</th>
+                                            <th>Status</th>
+                                            <th>Handover</th>
+                                            <th>Files</th>
+                                            <th>Send To</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="plots-tbody">
+                                        <!-- Rows populated by JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Side detail panel -->
+                        <div class="plots-detail-panel" id="plots-detail-panel">
+                            <div class="plots-detail-empty" id="plots-detail-empty">
+                                <i class="fas fa-map-marked-alt"></i>
+                                <p>Click a row for details</p>
+                            </div>
+                            <div class="plots-detail-content" id="plots-detail-content" style="display:none;">
+                                <div class="plots-detail-header">
+                                    <span class="plots-detail-close" onclick="closePlotDetail()">&times;</span>
+                                    <h3 id="plots-detail-plotno">—</h3>
+                                    <span id="plots-detail-status-badge" class="plots-detail-badge"></span>
+                                </div>
+                                <div class="plots-detail-body" id="plots-detail-body"></div>
+                                <div class="plots-detail-footer">
+                                    <button class="plots-icon-btn" id="plots-detail-edit" title="Edit"><i class="fas fa-edit"></i></button>
+                                    <button class="plots-icon-btn" id="plots-detail-send" title="Send To"><i class="fas fa-paper-plane"></i></button>
+                                    <button class="plots-icon-btn" id="plots-detail-print" title="Print"><i class="fas fa-print"></i></button>
+                                    <button class="plots-icon-btn delete" id="plots-detail-delete" title="Delete"><i class="fas fa-trash"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── AD BOXES ── -->
                 <div class="ad-grid ad-grid-2" style="padding: 0 20px; margin: 30px 0;">
-                    <!-- Ad Box 1 - Investor Platform -->
                     <div class="ad-box" onclick="window.open('https://investor.at.world/', '_blank')">
                         <div class="ad-box-image" style="background: var(--ad-gradient-investor);">
                             <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'%3E%3Crect fill='%237c3aed' width='400' height='300'/%3E%3Ctext x='50%25' y='45%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='80' fill='white'%3E%F0%9F%92%BC%3C/text%3E%3Ctext x='50%25' y='65%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='24' fill='white' font-weight='bold'%3EInvestor%3C/text%3E%3Ctext x='50%25' y='75%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='16' fill='%23c4b5fd'%3Eat.world%3C/text%3E%3C/svg%3E" alt="Investor at World">
@@ -806,8 +933,6 @@
                             <button class="ad-box-cta">Start Investing</button>
                         </div>
                     </div>
-
-                    <!-- Ad Box 2 - Homes Premium Listings -->
                     <div class="ad-box" onclick="window.open('https://homes.at.world/', '_blank')">
                         <div class="ad-box-image" style="background: var(--ad-gradient-homes);">
                             <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'%3E%3Crect fill='%23005163' width='400' height='300'/%3E%3Ctext x='50%25' y='45%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='80' fill='white'%3E%F0%9F%8C%9F%3C/text%3E%3Ctext x='50%25' y='65%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='20' fill='white' font-weight='bold'%3EPremium%3C/text%3E%3Ctext x='50%25' y='75%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='16' fill='%23a8aeaf'%3EHomes%3C/text%3E%3C/svg%3E" alt="Premium Homes">
@@ -825,8 +950,6 @@
                             <button class="ad-box-cta">View Listings</button>
                         </div>
                     </div>
-
-                    <!-- Ad Box 3 - Club Platform -->
                     <div class="ad-box" onclick="window.open('https://club.at.world/', '_blank')">
                         <div class="ad-box-image" style="background: linear-gradient(135deg, #be185d 0%, #ec4899 50%, #f472b6 100%);">
                             <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'%3E%3Cdefs%3E%3ClinearGradient id='bg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23be185d'/%3E%3Cstop offset='50%25' style='stop-color:%23ec4899'/%3E%3Cstop offset='100%25' style='stop-color:%23f472b6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='400' height='300' fill='url(%23bg)'/%3E%3Ctext x='50%25' y='45%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='80' fill='white'%3E👥%3C/text%3E%3Ctext x='50%25' y='65%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='24' fill='white' font-weight='bold'%3ECLUB%3C/text%3E%3Ctext x='50%25' y='75%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='16' fill='%23fbcfe8'%3Eat.world%3C/text%3E%3C/svg%3E" alt="Club at World">
