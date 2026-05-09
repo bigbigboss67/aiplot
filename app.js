@@ -1221,15 +1221,20 @@ const UI = {
 
         this.plotsPageMap = L.map('plots-page-map').setView([25.1254, 55.1800], 11);
 
-        // Satellite imagery layer
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        // Satellite imagery layer (default)
+        this._satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
             attribution: 'Tiles &copy; Esri', maxZoom: 19
         }).addTo(this.plotsPageMap);
 
         // Labels overlay layer
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+        this._labelLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
             maxZoom: 19, opacity: 0.8
         }).addTo(this.plotsPageMap);
+
+        // Street layer (not added yet)
+        this._streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
+        });
 
         this.renderPlotsPageMarkers();
     },
@@ -1305,30 +1310,50 @@ const UI = {
         // Store selection for cross-view sync
         this._selectedPlotId = plot.id;
 
+        // Hide "How to Use" when content is shown
+        const howto = document.querySelector('.plots-map-howto');
+        if (howto) howto.style.display = 'none';
+
         const statusCls = (plot.status||'').toLowerCase() === 'available' ? 'p2-status-available' :
                           (plot.status||'').toLowerCase() === 'reserved'  ? 'p2-status-reserved'  : 'p2-status-sold';
 
         const rows = [
             ['City', plot.city], ['District', plot.district], ['Development', plot.development],
             ['Zone', plot.zone], ['Type', plot.type||plot.plotType], ['For', plot.plotFor],
-            ['Zoning', plot.zoning], ['GFA', plot.gfa], ['NFA', plot.nfa],
-            ['BUA', plot.bua], ['FAR', plot.far], ['Height', plot.height],
-            ['Size', plot.size], ['View', plot.view],
+            ['Zoning', plot.zoning], ['GFA', plot.gfa ? plot.gfa + ' sqm' : null],
+            ['NFA', plot.nfa ? plot.nfa + ' sqm' : null], ['BUA', plot.bua ? plot.bua + ' sqm' : null],
+            ['FAR', plot.far], ['Height', plot.height], ['Size', plot.size],
+            ['View', plot.view],
             ['Status', `<span class="p2-status-badge ${statusCls}">${plot.status||'-'}</span>`],
             ['Handover', plot.handover||plot.handoverDate],
-            ['Owner', plot.ownerName], ['Agent', plot.agentName],
-            ['Price', plot.price ? 'AED '+Number(plot.price).toLocaleString() : null]
+            ['Owner', plot.ownerName], ['Owner Tel', plot.ownerPhone],
+            ['Agent', plot.agentName], ['Agent Tel', plot.agentPhone],
+            ['Price', plot.price ? 'AED '+Number(plot.price).toLocaleString() : null],
+            ['Price/GFA', plot.pricePerGFA ? 'AED '+Number(plot.pricePerGFA).toLocaleString() : null]
         ].filter(([,v]) => v && v !== '-');
 
+        const svUrl = (plot.lat && plot.lng)
+            ? `https://www.google.com/maps?q=&layer=c&cbll=${plot.lat},${plot.lng}`
+            : null;
+        const callName = plot.ownerName || plot.agentName || plot.plotNo || 'Client';
+
         body.innerHTML = `
-            <p class="plots-map-card-plotno">${plot.plotNo || plot.id}</p>
+            <div class="plots-map-card-plotno">
+                <span>${plot.plotNo || plot.id}</span>
+                <span class="p2-status-badge ${statusCls}" style="font-size:11px;">${plot.status||''}</span>
+            </div>
             ${rows.map(([k,v]) => `<div class="plots-map-card-row">
                 <span class="plots-map-card-label">${k}</span>
                 <span class="plots-map-card-val">${v}</span>
             </div>`).join('')}
             <div class="plots-map-card-actions">
+                <button class="plots-map-card-btn call" onclick="showVideoCallDialog('${callName.replace(/'/g,"\\'")}')">
+                    <i class="fas fa-video"></i> Call
+                </button>
+                ${svUrl ? `<button class="plots-map-card-btn sv" onclick="window.open('${svUrl}','_blank')">
+                    <i class="fas fa-street-view"></i> StreetView
+                </button>` : ''}
                 <button class="plots-map-card-btn" onclick="editPlot('${plot.id}')"><i class="fas fa-edit"></i> Edit</button>
-                <button class="plots-map-card-btn" onclick="openSendToModal('plots','${plot.id}','${plot.plotNo}')"><i class="fas fa-paper-plane"></i> Send</button>
                 <button class="plots-map-card-btn danger" onclick="deletePlot('${plot.id}')"><i class="fas fa-trash"></i> Del</button>
             </div>`;
 
@@ -3525,6 +3550,23 @@ function deleteDeal(id) {
 
 // ── Plots Page View Functions ──────────────────────────────────────────────
 
+function setMapType(type) {
+    const map = UI.plotsPageMap;
+    if (!map) return;
+    if (type === 'satellite') {
+        if (UI._streetLayer) map.removeLayer(UI._streetLayer);
+        if (UI._satelliteLayer) UI._satelliteLayer.addTo(map);
+        if (UI._labelLayer) UI._labelLayer.addTo(map);
+    } else {
+        if (UI._satelliteLayer) map.removeLayer(UI._satelliteLayer);
+        if (UI._labelLayer) map.removeLayer(UI._labelLayer);
+        if (UI._streetLayer) UI._streetLayer.addTo(map);
+    }
+    document.querySelectorAll('.map-type-btn').forEach(b =>
+        b.classList.toggle('active', b.id === 'btn-' + type));
+}
+window.setMapType = setMapType;
+
 function switchPlotsView(view) {
     const mapView  = document.getElementById('plots-map-view');
     const listView = document.getElementById('plots-list-view');
@@ -3607,6 +3649,10 @@ function clearMapSelection() {
             <i class="fas fa-map-marker-alt"></i>
             <p>Click a pin on the map to see plot details</p>
         </div>`;
+    const howto = document.querySelector('.plots-map-howto');
+    if (howto) howto.style.display = '';
+    UI._selectedPlotId = null;
+    document.querySelectorAll('#plots-tbody tr').forEach(tr => tr.classList.remove('plots-row-selected'));
 }
 
 // Plot Functions

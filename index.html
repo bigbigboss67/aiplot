@@ -815,6 +815,10 @@
                     <div class="plots-map-layout">
                         <!-- Map -->
                         <div class="plots-map-container">
+                            <div class="map-type-toggle">
+                                <button class="map-type-btn active" id="btn-satellite" onclick="setMapType('satellite')"><i class="fas fa-satellite"></i> Satellite</button>
+                                <button class="map-type-btn" id="btn-street" onclick="setMapType('street')"><i class="fas fa-road"></i> Street</button>
+                            </div>
                             <div id="plots-page-map" class="plots-page-map"></div>
                         </div>
                         <!-- Map info card -->
