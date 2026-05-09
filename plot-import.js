@@ -34,31 +34,33 @@
   // For each key, list the header strings (lowercased, partial match) that should
   // map to that key in CSV/Excel/text imports.
   const FIELD_ALIASES = {
-    plotNo:       ['plot no', 'plot number', 'ref', 'reference', 'code'],
-    development:  ['project', 'development', 'plot name', 'name', 'building'],
-    city:         ['city'],
-    district:     ['location', 'district', 'area', 'neighbourhood', 'neighborhood', 'community'],
-    zone:         ['zone'],
-    plotType:     ['plot type', 'type'],
-    plotFor:      ['plot for', 'for', 'sale type', 'listing type'],
-    zoning:       ['zoning'],
-    size:         ['land', 'land area', 'plot size', 'size', 'land sqft', 'land sq ft', 'land (sqft)'],
-    gfa:          ['gfa', 'gross floor area', 'built up', 'bua'],
+    plotNo:       ['plot no', 'plot number', 'plot #', 'plot id', 'ref', 'reference', 'code', 'unit no', 'unit number', 'lot no', 'lot number'],
+    development:  ['project', 'development', 'plot name', 'project name', 'development name', 'building name', 'community name'],
+    city:         ['city', 'emirate'],
+    district:     ['location', 'district', 'neighbourhood', 'neighborhood', 'community', 'sub community', 'sub-community'],
+    zone:         ['zone', 'zone no', 'zone number'],
+    plotType:     ['plot type', 'property type'],
+    plotFor:      ['plot for', 'sale type', 'listing type', 'offer type'],
+    zoning:       ['zoning', 'usage', 'land use'],
+    status:       ['status', 'availability', 'listing status'],
+    size:         ['area', 'land area', 'plot area', 'plot size', 'land size', 'total area', 'size',
+                   'area sqm', 'area sqft', 'land sqm', 'land sqft', 'land sq ft', 'plot sqm', 'plot sqft'],
+    gfa:          ['gfa', 'gross floor area', 'built up area', 'bua'],
     nfa:          ['nfa', 'net floor area'],
-    far:          ['far', 'floor area ratio'],
-    height:       ['height', 'max height'],
-    view:         ['view'],
-    handoverDate: ['handover', 'handover date'],
-    totalPrice:   ['land price', 'total price', 'asking price', 'price (aed)', 'price'],
-    priceGfa:     ['price/sqft', 'price per sqft', 'aed/sqft', 'price/sq ft per gfa', 'rate'],
-    source:       ['source', 'owner type', 'broker / owner'],
-    ownerName:    ['owner name', 'owner'],
-    ownerPhone:   ['owner phone'],
-    ownerEmail:   ['owner email'],
-    agentName:    ['agent name', 'agent', 'broker name', 'broker'],
-    agentPhone:   ['agent phone', 'broker phone'],
+    far:          ['far', 'floor area ratio', 'plot ratio'],
+    height:       ['height', 'max height', 'building height', 'floors', 'no of floors'],
+    view:         ['view', 'views', 'orientation'],
+    handoverDate: ['handover', 'handover date', 'completion date', 'delivery date'],
+    totalPrice:   ['land price', 'total price', 'asking price', 'price (aed)', 'price aed', 'list price', 'sale price', 'price', 'cost'],
+    priceGfa:     ['price/sqft', 'price per sqft', 'aed/sqft', 'price per sqm', 'aed/sqm', 'price/sqm', 'rate', 'price/sq ft', 'price/sq ft per gfa'],
+    source:       ['source', 'owner type', 'broker / owner', 'listing source'],
+    ownerName:    ['owner name', 'owner', 'landlord', 'landlord name'],
+    ownerPhone:   ['owner phone', 'owner tel', 'owner mobile', 'owner contact'],
+    ownerEmail:   ['owner email', 'landlord email'],
+    agentName:    ['agent name', 'agent', 'broker name', 'broker', 'agent / broker'],
+    agentPhone:   ['agent phone', 'broker phone', 'agent tel', 'agent mobile'],
     agentEmail:   ['agent email', 'broker email'],
-    notes:        ['notes', 'remarks', 'comments', 'description'],
+    notes:        ['notes', 'remarks', 'comments', 'description', 'additional info', 'details'],
   };
 
   // Headers that don't map to a record field but should be folded into `notes`.
@@ -109,9 +111,16 @@
   /** Resolve a header string to a record field, or null if no match. */
   function headerToField(header) {
     if (!header) return null;
-    const h = String(header).toLowerCase().trim();
+    // Normalize: lowercase, collapse whitespace, strip trailing unit annotations like "(sqm)", "(AED)"
+    const h = String(header).toLowerCase().trim()
+      .replace(/\s*\([^)]*\)\s*$/, '')  // strip "(sqm)", "(AED)", "(sqft)" suffixes
+      .replace(/\s+/g, ' ').trim();
+
     for (const [field, aliases] of Object.entries(FIELD_ALIASES)) {
-      if (aliases.some(a => h === a || h.includes(a))) return field;
+      for (const a of aliases) {
+        if (h === a) return field;                         // always: exact match
+        if (a.includes(' ') && h.includes(a)) return field; // multi-word alias: substring ok
+      }
     }
     return null;
   }
@@ -151,6 +160,14 @@
         case 'priceGfa':
           val = parseAEDAmount(raw);
           break;
+        case 'status': {
+          const sv = String(raw).trim().toLowerCase();
+          val = sv === 'available' || sv === 'avail' || sv === 'free' || sv === 'active' || sv === 'yes' ? 'Available'
+              : sv === 'reserved' || sv === 'under offer' || sv === 'uo' || sv === 'hold' ? 'Reserved'
+              : sv === 'sold' || sv === 'closed' || sv === 'disposed' ? 'Sold'
+              : String(raw).trim().charAt(0).toUpperCase() + String(raw).trim().slice(1).toLowerCase();
+          break;
+        }
         default:
           val = String(raw).trim();
       }
@@ -172,8 +189,8 @@
     let skipped = 0;
     for (const row of rows) {
       const p = rowToPlot(row);
-      // Require at least one of: development, size, totalPrice
-      if (p.development || p.size || p.totalPrice) plots.push(p);
+      // Accept any row with at least one meaningful field populated
+      if (p.plotNo || p.development || p.district || p.size || p.gfa || p.totalPrice) plots.push(p);
       else skipped++;
     }
     return { plots, skipped };
@@ -650,8 +667,10 @@
       confirmBtn.textContent = 'Importing…';
       try {
         let ok = 0, fail = 0;
-        for (const p of parsedPlots) {
-          // Normalize field aliases before saving
+        for (const [i, p] of parsedPlots.entries()) {
+          // Auto-assign plotNo if missing
+          if (!p.plotNo) p.plotNo = 'IMP-' + String(i + 1).padStart(3, '0');
+          // Normalize field aliases for display/stats functions
           if (p.totalPrice && !p.price) p.price = p.totalPrice;
           if (p.priceGfa && !p.pricePerGFA) p.pricePerGFA = p.priceGfa;
           if (!p.status) p.status = 'Available';
