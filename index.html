@@ -820,14 +820,22 @@
                         <!-- Map info card -->
                         <div class="plots-map-card">
                             <div class="plots-map-card-header">
-                                <i class="fas fa-info-circle"></i> Plot Details
-                                <button class="plots-map-card-close" onclick="clearMapSelection()" title="Clear selection">&times;</button>
+                                <span><i class="fas fa-file-alt"></i> Plot Details</span>
+                                <button class="plots-map-card-close" onclick="clearMapSelection()" title="Clear">&times;</button>
                             </div>
                             <div id="plots-map-card-body">
                                 <div class="plots-map-card-empty">
                                     <i class="fas fa-map-marker-alt"></i>
-                                    <p>Click a pin on the map to see plot details</p>
+                                    <p>Click a marker for details</p>
                                 </div>
+                            </div>
+                            <div class="plots-map-howto">
+                                <p class="plots-map-howto-title"><i class="fas fa-question-circle"></i> How to Use</p>
+                                <ul>
+                                    <li>Click on the map to set plot location</li>
+                                    <li>Click a pin to view plot details</li>
+                                    <li>Switch to List view to search plots</li>
+                                </ul>
                             </div>
                         </div>
                     </div>
@@ -855,39 +863,27 @@
                     <div class="plots-list-layout">
                         <!-- Table -->
                         <div class="plots-table-wrap">
-                            <div class="table-container">
-                                <table class="data-table" id="plots-table">
-                                    <thead>
-                                        <tr>
-                                            <th><input type="checkbox" id="select-all-plots" onchange="toggleSelectAll('plots')"></th>
-                                            <th>Plot ID</th>
-                                            <th>Plot No</th>
-                                            <th>City</th>
-                                            <th>District</th>
-                                            <th>Development</th>
-                                            <th>Zone</th>
-                                            <th>Plot Type</th>
-                                            <th>Plot For</th>
-                                            <th>Zoning</th>
-                                            <th>GFA</th>
-                                            <th>NFA</th>
-                                            <th>BUA</th>
-                                            <th>FAR</th>
-                                            <th>Height</th>
-                                            <th>Size</th>
-                                            <th>View</th>
-                                            <th>Status</th>
-                                            <th>Handover</th>
-                                            <th>Files</th>
-                                            <th>Send To</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="plots-tbody">
-                                        <!-- Rows populated by JS -->
-                                    </tbody>
-                                </table>
-                            </div>
+                            <table class="p2-table" id="plots-table">
+                                <thead>
+                                    <tr>
+                                        <th><input type="checkbox" id="select-all-plots" onchange="toggleSelectAll('plots')"></th>
+                                        <th>PLOT ID</th>
+                                        <th>PLOT #</th>
+                                        <th>CITY</th>
+                                        <th>DISTRICT</th>
+                                        <th>DEV</th>
+                                        <th>ZONE</th>
+                                        <th>TYPE</th>
+                                        <th>FOR</th>
+                                        <th>ZONING</th>
+                                        <th>GFA</th>
+                                        <th>NFA</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="plots-tbody">
+                                    <!-- Rows populated by JS -->
+                                </tbody>
+                            </table>
                         </div>
 
                         <!-- Side detail panel -->
@@ -898,17 +894,10 @@
                             </div>
                             <div class="plots-detail-content" id="plots-detail-content" style="display:none;">
                                 <div class="plots-detail-header">
-                                    <span class="plots-detail-close" onclick="closePlotDetail()">&times;</span>
-                                    <h3 id="plots-detail-plotno">—</h3>
-                                    <span id="plots-detail-status-badge" class="plots-detail-badge"></span>
+                                    <span class="plots-detail-title"><i class="fas fa-file-alt"></i> Plot Details</span>
+                                    <button class="plots-detail-close-btn" onclick="closePlotDetail()" title="Close">&times;</button>
                                 </div>
                                 <div class="plots-detail-body" id="plots-detail-body"></div>
-                                <div class="plots-detail-footer">
-                                    <button class="plots-icon-btn" id="plots-detail-edit" title="Edit"><i class="fas fa-edit"></i></button>
-                                    <button class="plots-icon-btn" id="plots-detail-send" title="Send To"><i class="fas fa-paper-plane"></i></button>
-                                    <button class="plots-icon-btn" id="plots-detail-print" title="Print"><i class="fas fa-print"></i></button>
-                                    <button class="plots-icon-btn delete" id="plots-detail-delete" title="Delete"><i class="fas fa-trash"></i></button>
-                                </div>
                             </div>
                         </div>
                     </div>
