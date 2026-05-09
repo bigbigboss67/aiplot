@@ -1047,7 +1047,13 @@ const DataStore = {
     },
 
     addPlot(data) {
-        const newPlot = { ...data, id: this.getNextPlotId() };
+        const newPlot = {
+            ...data,
+            id: this.getNextPlotId(),
+            // Always ensure lat/lng so plots appear on map
+            lat: (data.lat && data.lat !== 0) ? data.lat : 25.05 + Math.random() * 0.25,
+            lng: (data.lng && data.lng !== 0) ? data.lng : 55.05 + Math.random() * 0.35,
+        };
         this.plots.push(newPlot);
         this.addActivity('plot', 'New Plot added', `${newPlot.id} - ${newPlot.plotNo}`);
         this.saveToStorage();
@@ -1247,7 +1253,9 @@ const UI = {
 
         const bounds = [];
         DataStore.plots.forEach(plot => {
-            if (!plot.lat || !plot.lng) return;
+            // Assign random Dubai coords for plots that lack them so they always appear on map
+            const lat = (plot.lat && plot.lat !== 0) ? plot.lat : (25.05 + Math.random() * 0.25);
+            const lng = (plot.lng && plot.lng !== 0) ? plot.lng : (55.05 + Math.random() * 0.35);
 
             const st = (plot.status || 'available').toLowerCase();
             const bg = st === 'available' ? '#10b981' : st === 'reserved' ? '#f59e0b' : '#ef4444';
@@ -1260,7 +1268,7 @@ const UI = {
                 iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -16]
             });
 
-            const marker = L.marker([plot.lat, plot.lng], { icon })
+            const marker = L.marker([lat, lng], { icon })
                 .addTo(this.plotsPageMap)
                 .bindPopup(this._buildMapPopup(plot), { maxWidth: 320 });
 
@@ -1268,7 +1276,7 @@ const UI = {
             marker.on('click', () => this.showPlotOnMapCard(plot));
 
             this.plotsPageMarkers.push(marker);
-            bounds.push([plot.lat, plot.lng]);
+            bounds.push([lat, lng]);
         });
 
         if (bounds.length > 1) this.plotsPageMap.fitBounds(bounds, { padding: [40, 40] });
@@ -4103,9 +4111,6 @@ function savePlot() {
         // CIS IDs for owner and agent
         ownerCisId: document.getElementById('plot-owner-cis-id').value || '',
         agentCisId: document.getElementById('plot-agent-cis-id').value || '',
-        // Location
-        lat: parseFloat(document.getElementById('plot-lat').value) || 0,
-        lng: parseFloat(document.getElementById('plot-lng').value) || 0,
         linkedDeal: document.getElementById('plot-linked-deal').value,
         notes: document.getElementById('plot-notes').value,
         areaUnit: document.getElementById('plot-area-unit')?.value || 'sqm',
@@ -4116,9 +4121,13 @@ function savePlot() {
         createdBy: existingPlot ? existingPlot.createdBy : 'Admin',
         modifiedDate: new Date().toISOString().split('T')[0],
         modifiedBy: 'Admin',
-        // Generate random coordinates near Dubai for new plots, keep existing for edits
-        lat: existingPlot ? existingPlot.lat : generateRandomDubaiLat(),
-        lng: existingPlot ? existingPlot.lng : generateRandomDubaiLng()
+        // Read visible lat/lng inputs; fall back to existing coords or random Dubai
+        lat: parseFloat(document.getElementById('plot-lat-visible')?.value)
+             || parseFloat(document.getElementById('plot-lat')?.value)
+             || (existingPlot?.lat) || generateRandomDubaiLat(),
+        lng: parseFloat(document.getElementById('plot-lng-visible')?.value)
+             || parseFloat(document.getElementById('plot-lng')?.value)
+             || (existingPlot?.lng) || generateRandomDubaiLng()
     };
 
     if (!data.plotNo) {

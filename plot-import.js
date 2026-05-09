@@ -704,6 +704,8 @@
     obs.observe(document.body, { childList: true, subtree: true });
     // Expose for manual triggering if needed
     window.openPlotImportModal = openModal;
+    // Alias used by HTML buttons in the Plots page and CIS page
+    window.openPlotImportFromCIS = openModal;
     console.log('[plot-import] Plot Import module loaded.');
   }
 
