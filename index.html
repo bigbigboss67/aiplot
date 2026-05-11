@@ -559,7 +559,13 @@ function saveToLocalStorage(){
   });
   try{localStorage.setItem('aiplot_plots',JSON.stringify(plots));}catch(e){}
   try{if(currentUser)localStorage.setItem('aiplot_user',JSON.stringify(currentUser));}catch(e){}
-  if(_syncActive)pushSync();
+  if(_syncActive && _fbRoomRef){
+    plots.forEach(function(p){
+      var sp = Object.assign({}, p);
+      if(typeof sp.image==='string'&&sp.image.startsWith('data:')) sp.image='';
+      _fbRoomRef.child(p.id).set(sp);
+    });
+  }
 }
 function loadFromLocalStorage(){
   try{var p=localStorage.getItem('aiplot_plots');if(p)plots=JSON.parse(p);}catch(e){plots=[];}
@@ -1674,7 +1680,7 @@ function debounceSearch(){clearTimeout(searchTimer);searchTimer=setTimeout(apply
 
 function toggleSelection(id,checked){if(checked)selectedIds.add(id);else selectedIds.delete(id);var c=selectedIds.size;var sc=document.getElementById('selectionCount'),bd=document.getElementById('bulkDeleteBtn'),be=document.getElementById('bulkExportBtn');if(sc)sc.textContent=c>0?c+' selected':'';if(bd)bd.style.display=c>0?'':'none';if(be)be.style.display=c>0?'':'none';}
 function toggleSelectAll(checked){if(checked)filteredPlots.forEach(function(p){selectedIds.add(p.id);});else selectedIds.clear();populateTable();var c=selectedIds.size;var sc=document.getElementById('selectionCount');if(sc)sc.textContent=c>0?c+' selected':'';var bd=document.getElementById('bulkDeleteBtn'),be=document.getElementById('bulkExportBtn');if(bd)bd.style.display=c>0?'':'none';if(be)be.style.display=c>0?'':'none';}
-function bulkDelete(){if(!selectedIds.size)return;if(!confirm('Delete '+selectedIds.size+' plots?'))return;plots=plots.filter(function(p){return!selectedIds.has(p.id);});selectedIds.clear();filteredPlots=plots.slice();saveToLocalStorage();populateTable();addPlotMarkers();updateTotalPlotsBadge();showToastNotification('Plots deleted.','success');}
+function bulkDelete(){if(!selectedIds.size)return;if(!confirm('Delete '+selectedIds.size+' plots?'))return;var toDel=Array.from(selectedIds);plots=plots.filter(function(p){return!selectedIds.has(p.id);});selectedIds.clear();filteredPlots=plots.slice();saveToLocalStorage();populateTable();addPlotMarkers();updateTotalPlotsBadge();showToastNotification('Plots deleted.','success');if(_syncActive && _fbRoomRef) toDel.forEach(function(id){_fbRoomRef.child(id).remove();});}
 function bulkExport(){downloadCSV(plots.filter(function(p){return selectedIds.has(p.id);}),'selected_plots.csv');}
 
 function selectPlot(id){
@@ -1830,7 +1836,7 @@ function selectPlot(id){
 }
 function closeCard(){var c=document.getElementById('plotCard');if(c){c.classList.remove('show');c.innerHTML='';}}
 function changePlotStatusFromCard(id,status){var p=plots.find(function(x){return x.id===id;});if(!p)return;p.status=status;saveToLocalStorage();addPlotMarkers();updateLegendCounts();if(currentView==='table')populateTable();showToastNotification('Status updated to '+status,'success');selectPlot(id);}
-function deletePlot(id){if(!confirm('Delete this plot?'))return;plots=plots.filter(function(p){return p.id!==id;});filteredPlots=filteredPlots.filter(function(p){return p.id!==id;});saveToLocalStorage();populateTable();addPlotMarkers();updateTotalPlotsBadge();closeCard();showToastNotification('Plot deleted.','success');}
+function deletePlot(id){if(!confirm('Delete this plot?'))return;plots=plots.filter(function(p){return p.id!==id;});filteredPlots=filteredPlots.filter(function(p){return p.id!==id;});saveToLocalStorage();populateTable();addPlotMarkers();updateTotalPlotsBadge();closeCard();showToastNotification('Plot deleted.','success');if(_syncActive && _fbRoomRef) _fbRoomRef.child(id).remove();}
 
 window.openPlotModal=function(id){
   var modal=document.getElementById('plotModal');modal.classList.remove('hidden');
@@ -2535,53 +2541,15 @@ function _setSyncStatus(s){
   else{btn.style.color='';btn.title='Sync';}
 }
 
-var _forcePull=false;
-function _applyRemoteData(raw){
-  if(!raw)return;
-  var str=typeof raw==='string'?raw:(raw instanceof Uint8Array||Array.isArray(raw))?new TextDecoder().decode(raw):String(raw);
-  var d;try{d=JSON.parse(str);}catch(e){return;}
-  if(!d||!Array.isArray(d.plots))return;
-  if(d.sid===_sessionId&&!_forcePull)return; /* own echo — ignore (unless force-pulling) */
-  _forcePull=false; /* reset after use */
-  _lastRemoteTs=d.ts||Date.now();
-  _lastSyncTime=Date.now();
-  var imgs={};plots.forEach(function(p){if(p.image)imgs[p.id]=p.image;});
-  plots=d.plots.map(function(p){if(!p.image&&imgs[p.id])p.image=imgs[p.id];return p;});
-  filteredPlots=plots.slice();
-  try{localStorage.setItem('aiplot_plots',JSON.stringify(plots));}catch(e){}
-  addPlotMarkers();populateTable();updateTotalPlotsBadge();updateLegendCounts();
-  _setSyncStatus('live');
-  var who=d.user&&d.user!=='unknown'?' from <b>'+esc(d.user)+'</b>':'';
-  showToastNotification('↓ Synced '+plots.length+' plots'+who,'success');
-}
-
-function _doPush(){
-  if(!_syncActive || !_fbRoomRef) return;
-  var payload=JSON.stringify({plots:_plotsForSync(plots),ts:Date.now(),sid:_sessionId,user:(currentUser&&currentUser.name)||'unknown',n:plots.length});
-  _fbRoomRef.set(payload).then(function(){
-    _setSyncStatus('live');
-  }).catch(function(err){
-    _setSyncStatus('error');
-    showToastNotification('Sync push failed: ' + err.message, 'error');
-  });
-}
-
-function pushSync(){clearTimeout(_pushTimer);_pushTimer=setTimeout(_doPush,600);}
-
-function pullSync(){
-  if(!_syncActive||!_fbRoomRef){showToastNotification('Not connected to a sync room','error');return;}
-  _forcePull=true;
-  _lastRemoteTs=0;
-  showToastNotification('Pulling latest from room…','info');
-  _fbRoomRef.once('value').then(function(snapshot){
-    var val = snapshot.val();
-    if(val) _applyRemoteData(val);
-    else showToastNotification('Room is empty', 'info');
-    _forcePull=false;
-  }).catch(function(){
-    _forcePull=false;
-    showToastNotification('Pull failed', 'error');
-  });
+var _syncRefreshTimer;
+function _syncRefreshUI(){
+  clearTimeout(_syncRefreshTimer);
+  _syncRefreshTimer = setTimeout(function(){
+    _lastSyncTime=Date.now();
+    filteredPlots=plots.slice();
+    try{localStorage.setItem('aiplot_plots',JSON.stringify(plots));}catch(e){}
+    addPlotMarkers();populateTable();updateTotalPlotsBadge();updateLegendCounts();
+  }, 150);
 }
 
 function connectSync(autoRoom){
@@ -2605,26 +2573,64 @@ function connectSync(autoRoom){
   showToastNotification('Connecting to room <b>'+esc(room)+'</b>…','info');
   _setSyncStatus('connecting');
   
-  _fbRoomRef = _fbDb.ref('sync_rooms/' + room);
+  _fbRoomRef = _fbDb.ref('sync_rooms/' + room + '/plots');
   
-  _fbRoomRef.on('value', function(snapshot){
-    var val = snapshot.val();
-    if(val){
-      _applyRemoteData(val);
-    } else {
-      // Room is empty, initialize it if we have plots
+  _fbRoomRef.once('value').then(function(snapshot){
+    _setSyncStatus('live');
+    var data = snapshot.val();
+    if(!data){
       if(plots.length > 0){
-        _doPush();
-      } else {
-        _setSyncStatus('live');
-        showToastNotification('✓ Joined empty room <b>'+esc(_syncRoom)+'</b>','success');
+        plots.forEach(function(p){
+          var sp = Object.assign({}, p);
+          if(typeof sp.image==='string'&&sp.image.startsWith('data:')) sp.image='';
+          _fbRoomRef.child(p.id).set(sp);
+        });
       }
+      showToastNotification('✓ Joined empty room <b>'+esc(_syncRoom)+'</b>','success');
+    } else {
+      var toPush = [];
+      plots.forEach(function(p){
+        if(!data[p.id]) toPush.push(p);
+      });
+      if(toPush.length > 0){
+        toPush.forEach(function(p){
+          var sp = Object.assign({}, p);
+          if(typeof sp.image==='string'&&sp.image.startsWith('data:')) sp.image='';
+          _fbRoomRef.child(p.id).set(sp);
+        });
+      }
+      showToastNotification('✓ Joined room <b>'+esc(_syncRoom)+'</b>','success');
     }
-  }, function(error){
+
+    _fbRoomRef.on('child_added', function(snap){
+      var p = snap.val(); if(!p)return;
+      var idx = plots.findIndex(function(x){return String(x.id) === String(p.id);});
+      if(idx === -1) { plots.push(p); _syncRefreshUI(); }
+      else if(JSON.stringify(plots[idx]) !== JSON.stringify(p)) { plots[idx] = Object.assign(plots[idx], p); _syncRefreshUI(); }
+    });
+    
+    _fbRoomRef.on('child_changed', function(snap){
+      var p = snap.val(); if(!p)return;
+      var idx = plots.findIndex(function(x){return String(x.id) === String(p.id);});
+      if(idx !== -1 && JSON.stringify(plots[idx]) !== JSON.stringify(p)) { plots[idx] = Object.assign(plots[idx], p); _syncRefreshUI(); }
+    });
+    
+    _fbRoomRef.on('child_removed', function(snap){
+      var p = snap.val(); if(!p)return;
+      var len=plots.length;
+      plots = plots.filter(function(x){return String(x.id) !== String(p.id);});
+      if(plots.length !== len) _syncRefreshUI();
+    });
+
+  }).catch(function(error){
     _setSyncStatus('error');
     showToastNotification('Firebase connection error: ' + error.message, 'error');
   });
 }
+
+function _doPush(){}
+function pushSync(){}
+function pullSync(){}
 
 function disconnectSync(silent){
   clearTimeout(_pushTimer);
@@ -2650,7 +2656,7 @@ function showSyncModal(){
   modal.innerHTML='<div style="background:#1e293b;border:1px solid #334155;border-radius:18px;width:93%;max-width:500px;overflow:hidden;">'+
     '<div style="padding:17px 22px;border-bottom:1px solid #334155;display:flex;justify-content:space-between;align-items:center;gap:10px;">'+
       '<div><div style="font-size:15px;font-weight:700;color:#f1f5f9;"><i class="fas fa-bolt" style="color:#6366f1;margin-right:7px;"></i>Live Room Sync</div>'+
-      '<div style="font-size:10px;color:#64748b;margin-top:2px;">MQTT · end-to-end · no account needed</div></div>'+
+      '<div style="font-size:10px;color:#64748b;margin-top:2px;">Firebase · real-time native sync · no account needed</div></div>'+
       '<button onclick="document.getElementById(\'syncModal\').remove()" style="background:#334155;border:none;border-radius:7px;color:#94a3b8;width:30px;height:30px;cursor:pointer;font-size:17px;flex-shrink:0;">&times;</button>'+
     '</div>'+
     '<div style="padding:18px 22px;">'+
@@ -2663,10 +2669,6 @@ function showSyncModal(){
           '<div style="display:flex;align-items:center;gap:8px;">'+
             '<code style="flex:1;background:#0f172a;border:1px solid #334155;border-radius:7px;padding:8px 12px;font-size:14px;font-weight:700;color:#60a5fa;letter-spacing:1px;">'+esc(_syncRoom)+'</code>'+
             '<button onclick="(navigator.clipboard||{writeText:function(){}}).writeText(\''+esc(_syncRoom)+'\').then(function(){showToastNotification(\'Copied!\',\'success\');})" style="background:#1e3a5f;color:#93c5fd;border:1px solid #1e4080;border-radius:7px;padding:8px 12px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;"><i class="fas fa-copy"></i> Copy</button>'+
-          '</div>'+
-          '<div style="display:flex;gap:6px;margin-top:10px;">'+
-            '<button onclick="_doPush()" style="flex:1;background:#059669;color:white;border:none;border-radius:7px;padding:7px;font-size:11px;font-weight:700;cursor:pointer;"><i class="fas fa-upload"></i> Push my data</button>'+
-            '<button onclick="pullSync()" style="flex:1;background:#0369a1;color:white;border:none;border-radius:7px;padding:7px;font-size:11px;font-weight:700;cursor:pointer;"><i class="fas fa-download"></i> Pull latest</button>'+
           '</div>'+
         '</div>'
       :'')+
