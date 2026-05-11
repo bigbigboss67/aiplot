@@ -563,7 +563,7 @@ function saveToLocalStorage(){
     plots.forEach(function(p){
       var sp = Object.assign({}, p);
       if(typeof sp.image==='string'&&sp.image.startsWith('data:')) sp.image='';
-      _fbRoomRef.child(p.id).set(sp);
+      _fbRoomRef.child(String(p.id).replace(/\./g, '_')).set(sp);
     });
   }
 }
@@ -1680,7 +1680,7 @@ function debounceSearch(){clearTimeout(searchTimer);searchTimer=setTimeout(apply
 
 function toggleSelection(id,checked){if(checked)selectedIds.add(id);else selectedIds.delete(id);var c=selectedIds.size;var sc=document.getElementById('selectionCount'),bd=document.getElementById('bulkDeleteBtn'),be=document.getElementById('bulkExportBtn');if(sc)sc.textContent=c>0?c+' selected':'';if(bd)bd.style.display=c>0?'':'none';if(be)be.style.display=c>0?'':'none';}
 function toggleSelectAll(checked){if(checked)filteredPlots.forEach(function(p){selectedIds.add(p.id);});else selectedIds.clear();populateTable();var c=selectedIds.size;var sc=document.getElementById('selectionCount');if(sc)sc.textContent=c>0?c+' selected':'';var bd=document.getElementById('bulkDeleteBtn'),be=document.getElementById('bulkExportBtn');if(bd)bd.style.display=c>0?'':'none';if(be)be.style.display=c>0?'':'none';}
-function bulkDelete(){if(!selectedIds.size)return;if(!confirm('Delete '+selectedIds.size+' plots?'))return;var toDel=Array.from(selectedIds);plots=plots.filter(function(p){return!selectedIds.has(p.id);});selectedIds.clear();filteredPlots=plots.slice();saveToLocalStorage();populateTable();addPlotMarkers();updateTotalPlotsBadge();showToastNotification('Plots deleted.','success');if(_syncActive && _fbRoomRef) toDel.forEach(function(id){_fbRoomRef.child(id).remove();});}
+function bulkDelete(){if(!selectedIds.size)return;if(!confirm('Delete '+selectedIds.size+' plots?'))return;var toDel=Array.from(selectedIds);plots=plots.filter(function(p){return!selectedIds.has(p.id);});selectedIds.clear();filteredPlots=plots.slice();saveToLocalStorage();populateTable();addPlotMarkers();updateTotalPlotsBadge();showToastNotification('Plots deleted.','success');if(_syncActive && _fbRoomRef) toDel.forEach(function(id){_fbRoomRef.child(String(id).replace(/\./g, '_')).remove();});}
 function bulkExport(){downloadCSV(plots.filter(function(p){return selectedIds.has(p.id);}),'selected_plots.csv');}
 
 function selectPlot(id){
@@ -1836,7 +1836,7 @@ function selectPlot(id){
 }
 function closeCard(){var c=document.getElementById('plotCard');if(c){c.classList.remove('show');c.innerHTML='';}}
 function changePlotStatusFromCard(id,status){var p=plots.find(function(x){return x.id===id;});if(!p)return;p.status=status;saveToLocalStorage();addPlotMarkers();updateLegendCounts();if(currentView==='table')populateTable();showToastNotification('Status updated to '+status,'success');selectPlot(id);}
-function deletePlot(id){if(!confirm('Delete this plot?'))return;plots=plots.filter(function(p){return p.id!==id;});filteredPlots=filteredPlots.filter(function(p){return p.id!==id;});saveToLocalStorage();populateTable();addPlotMarkers();updateTotalPlotsBadge();closeCard();showToastNotification('Plot deleted.','success');if(_syncActive && _fbRoomRef) _fbRoomRef.child(id).remove();}
+function deletePlot(id){if(!confirm('Delete this plot?'))return;plots=plots.filter(function(p){return p.id!==id;});filteredPlots=filteredPlots.filter(function(p){return p.id!==id;});saveToLocalStorage();populateTable();addPlotMarkers();updateTotalPlotsBadge();closeCard();showToastNotification('Plot deleted.','success');if(_syncActive && _fbRoomRef) _fbRoomRef.child(String(id).replace(/\./g, '_')).remove();}
 
 window.openPlotModal=function(id){
   var modal=document.getElementById('plotModal');modal.classList.remove('hidden');
@@ -2583,20 +2583,20 @@ function connectSync(autoRoom){
         plots.forEach(function(p){
           var sp = Object.assign({}, p);
           if(typeof sp.image==='string'&&sp.image.startsWith('data:')) sp.image='';
-          _fbRoomRef.child(p.id).set(sp);
+          _fbRoomRef.child(String(p.id).replace(/\./g, '_')).set(sp);
         });
       }
       showToastNotification('✓ Joined empty room <b>'+esc(_syncRoom)+'</b>','success');
     } else {
       var toPush = [];
       plots.forEach(function(p){
-        if(!data[p.id]) toPush.push(p);
+        if(!data[String(p.id).replace(/\./g, '_')]) toPush.push(p);
       });
       if(toPush.length > 0){
         toPush.forEach(function(p){
           var sp = Object.assign({}, p);
           if(typeof sp.image==='string'&&sp.image.startsWith('data:')) sp.image='';
-          _fbRoomRef.child(p.id).set(sp);
+          _fbRoomRef.child(String(p.id).replace(/\./g, '_')).set(sp);
         });
       }
       showToastNotification('✓ Joined room <b>'+esc(_syncRoom)+'</b>','success');
