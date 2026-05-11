@@ -546,7 +546,21 @@ var _sessionId=(function(){var k='_aiplot_sid',s=localStorage.getItem(k);if(!s){
 /* Owner access code system */
 var _ownerCode=null,_ownerUnlocked=false;
 
-function saveToLocalStorage(){try{localStorage.setItem('aiplot_plots',JSON.stringify(plots));}catch(e){}try{if(currentUser)localStorage.setItem('aiplot_user',JSON.stringify(currentUser));}catch(e){}if(_syncActive)pushSync();}
+function saveToLocalStorage(){
+  var maxUid=0;
+  plots.forEach(function(p){
+    if(p.uid){var m=p.uid.match(/-(\d+)$/);if(m)maxUid=Math.max(maxUid,parseInt(m[1],10));}
+  });
+  plots.forEach(function(p){
+    if(!p.uid){
+      maxUid++;
+      p.uid = ((p.country||'UAE').substring(0,3) + '-' + (p.city||'DXB').substring(0,3) + '-' + maxUid).toUpperCase();
+    }
+  });
+  try{localStorage.setItem('aiplot_plots',JSON.stringify(plots));}catch(e){}
+  try{if(currentUser)localStorage.setItem('aiplot_user',JSON.stringify(currentUser));}catch(e){}
+  if(_syncActive)pushSync();
+}
 function loadFromLocalStorage(){
   try{var p=localStorage.getItem('aiplot_plots');if(p)plots=JSON.parse(p);}catch(e){plots=[];}
   try{var u=localStorage.getItem('aiplot_user');if(u)currentUser=JSON.parse(u);}catch(e){}
@@ -1601,7 +1615,7 @@ function populateTable(){
     var sel=selectedIds.has(p.id);var pid=p.id;
     var tr=document.createElement('tr');if(sel)tr.className='rowsel';
     tr.innerHTML='<td><input type="checkbox"'+(sel?' checked':'')+' onchange="toggleSelection('+pid+',this.checked)"></td>'+
-      '<td style="font-weight:700;color:#f1f5f9;">'+esc(p.no)+'</td>'+
+      '<td style="font-weight:700;color:#f1f5f9;">'+esc(p.no)+'<br><span style="font-size:9px;color:#64748b;font-weight:normal;background:#1e293b;padding:1px 4px;border-radius:3px;display:inline-block;margin-top:3px;">'+esc(p.uid||'')+'</span></td>'+
       '<td style="color:#94a3b8;">'+esc(p.dev||'—')+'</td>'+
       '<td style="color:#94a3b8;">'+esc(p.type||'—')+'</td>'+
       '<td><div style="font-weight:600;color:#e2e8f0;">'+(szOk?fmtN(sz)+' sqm':'—')+'</div>'+(szSqft?'<div style="font-size:10px;color:#64748b;">'+szSqft+'</div>':'')+'</td>'+
@@ -1756,7 +1770,7 @@ function selectPlot(id){
     /* Header */
     '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">'+
       '<div>'+
-        '<div style="font-size:18px;font-weight:900;color:#f1f5f9;letter-spacing:-0.5px;">'+esc(p.no)+'</div>'+
+        '<div style="font-size:18px;font-weight:900;color:#f1f5f9;letter-spacing:-0.5px;">'+esc(p.no)+' <span style="font-size:10px;color:#94a3b8;font-weight:normal;background:#1e293b;padding:2px 6px;border-radius:4px;vertical-align:middle;margin-left:6px;border:1px solid #334155;">'+esc(p.uid||'')+'</span></div>'+
         (breadcrumb?'<div style="font-size:10px;color:#64748b;margin-top:2px;">'+breadcrumb+'</div>':'')+
         (p.type?'<div style="font-size:10px;color:#94a3b8;margin-top:2px;font-style:italic;">'+esc(p.type)+(p.saleType?' &bull; '+esc(p.saleType):'')+'</div>':'')+
       '</div>'+
