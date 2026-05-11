@@ -563,6 +563,16 @@ function saveToLocalStorage(){
 }
 function loadFromLocalStorage(){
   try{var p=localStorage.getItem('aiplot_plots');if(p)plots=JSON.parse(p);}catch(e){plots=[];}
+  var maxUid=0;
+  plots.forEach(function(p){
+    if(p.uid){var m=p.uid.match(/-(\d+)$/);if(m)maxUid=Math.max(maxUid,parseInt(m[1],10));}
+  });
+  plots.forEach(function(p){
+    if(!p.uid){
+      maxUid++;
+      p.uid = ((p.country||'UAE').substring(0,3) + '-' + (p.city||'DXB').substring(0,3) + '-' + maxUid).toUpperCase();
+    }
+  });
   try{var u=localStorage.getItem('aiplot_user');if(u)currentUser=JSON.parse(u);}catch(e){}
   try{var s=localStorage.getItem('aiplot_sync');if(s)_syncConfig=JSON.parse(s);}catch(e){}
   try{_ownerCode=localStorage.getItem('aiplot_owner_code')||null;}catch(e){}
@@ -2532,7 +2542,6 @@ function _applyRemoteData(raw){
   var d;try{d=JSON.parse(str);}catch(e){return;}
   if(!d||!Array.isArray(d.plots))return;
   if(d.sid===_sessionId&&!_forcePull)return; /* own echo — ignore (unless force-pulling) */
-  if(d.ts&&d.ts>0&&d.ts<=_lastRemoteTs&&!_forcePull)return; /* stale (unless force-pulling) */
   _forcePull=false; /* reset after use */
   _lastRemoteTs=d.ts||Date.now();
   _lastSyncTime=Date.now();
