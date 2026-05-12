@@ -380,6 +380,8 @@ body{background:#0f172a;color:#e2e8f0;font-family:Inter,system-ui,sans-serif;hei
       <div class="fsection">
         <div class="fsectitle">Notes</div>
         <div class="fgroup"><textarea id="pm_notes" placeholder="Additional notes..."></textarea></div>
+        <div class="fsectitle" style="margin-top:15px;color:#f59e0b;">Follow Up (Local Only)</div>
+        <div class="fgroup"><textarea id="pm_followup" placeholder="Who was it sent to? What was the answer? (Not synced)"></textarea></div>
       </div>
     </div>
     <div class="mfoot">
@@ -562,8 +564,9 @@ function saveToLocalStorage(){
   if(_syncActive && _fbRoomRef){
     plots.forEach(function(p){
       var sp = JSON.parse(JSON.stringify(p));
-      if(typeof sp.image==='string'&&sp.image.startsWith('data:')) sp.image='';
-      _fbRoomRef.child(String(p.id).replace(/\./g, '_')).set(sp);
+          if(typeof sp.image==='string'&&sp.image.startsWith('data:')) sp.image='';
+          delete sp.followUp;
+          _fbRoomRef.child(String(p.id).replace(/\./g, '_')).set(sp);
     });
   }
 }
@@ -1459,7 +1462,7 @@ function addPlotMarkers(){
       m.bindPopup(makePopupHTML(p),{maxWidth:265,className:'aiplot-popup',closeButton:true});
       var ttip='<b>'+esc(p.no)+'</b>'+(p.dev?' &mdash; '+esc(p.dev):'');
       if(isApprox)ttip+='<br><span style="color:#fbbf24;font-size:10px;">⚠ Approximate location</span>';
-      m.bindTooltip(ttip,{direction:'top',offset:[0,-52],opacity:0.95});
+      m.bindTooltip(ttip,{direction:'top',offset:[0,-52],opacity:0.95,sticky:true});
       markerCluster.addLayer(m);
       added++;
     }catch(e){console.warn('Marker error for plot '+p.no+':',e);}
@@ -1644,6 +1647,7 @@ function populateTable(){
         '<button class="fbtn" onclick="selectPlot('+pid+')" style="margin-right:3px;" title="View"><i class="fas fa-eye"></i></button>'+
         '<button class="fbtn" onclick="openPlotModal('+pid+')" style="margin-right:3px;" title="Edit"><i class="fas fa-edit"></i></button>'+
         (!p.lat||!p.lng?'<button class="fbtn" style="color:#6366f1;margin-right:3px;" onclick="startSetOnMapModeForPlot('+pid+')" title="Place on Map"><i class="fas fa-map-marker-alt"></i></button>':'')+
+        (p.lat&&p.lng&&!isNaN(parseFloat(p.lat))?'<button class="fbtn" onclick="togglePlotView(\'map\'); map.flyTo(['+p.lat+','+p.lng+'], 18);" style="margin-right:3px;color:#0ea5e9;" title="Show on Map"><i class="fas fa-map-marked-alt"></i></button>':'')+
         '<button class="fbtn" onclick="printPlot('+pid+')" style="margin-right:3px;" title="Print"><i class="fas fa-print"></i></button>'+
         '<button class="fbtn" style="color:#ef4444;" onclick="deletePlot('+pid+')" title="Delete"><i class="fas fa-trash"></i></button>'+
       '</td>';
@@ -1828,6 +1832,7 @@ function selectPlot(id){
       '<button class="btn" style="background:#059669;color:white;justify-content:center;font-size:11px;padding:7px 4px;" onclick="showSendOptions('+pid+')"><i class="fas fa-share-alt"></i> Share</button>'+
       '<button class="btn" style="background:#7c3aed;color:white;justify-content:center;font-size:11px;padding:7px 4px;" onclick="startVideoCall('+pid+')"><i class="fas fa-video"></i> Call</button>'+
       '<button class="btn" style="background:#0284c7;color:white;justify-content:center;font-size:11px;padding:7px 4px;grid-column:span 2;" onclick="closeCard(); togglePlotView(\'map\'); map.flyTo(['+p.lat+','+p.lng+'], 18);"><i class="fas fa-map-marker-alt"></i> Show on Map</button>'+
+      '<button class="btn" style="background:#f59e0b;color:white;justify-content:center;font-size:11px;padding:7px 4px;grid-column:span 2;" onclick="generateUNIDO('+pid+')"><i class="fas fa-brain"></i> Generate UNIDO Feasibility</button>'+
     '</div>'+
     '<button class="btn btnd" onclick="deletePlot('+pid+')"><i class="fas fa-trash"></i> Delete Plot</button>'+
     '<button class="fbtn" style="margin-top:7px;width:100%;text-align:center;" onclick="closeCard()"><i class="fas fa-times"></i> Close</button>'+
@@ -1842,7 +1847,7 @@ function deletePlot(id){if(!confirm('Delete this plot?'))return;plots=plots.filt
 
 window.openPlotModal=function(id){
   var modal=document.getElementById('plotModal');modal.classList.remove('hidden');
-  ['pm_id','pm_no','pm_dev','pm_gfa','pm_nfa','pm_far','pm_bua','pm_lat','pm_lng','pm_video','pm_notes'].forEach(function(f){var el=document.getElementById(f);if(el)el.value='';});
+  ['pm_id','pm_no','pm_dev','pm_gfa','pm_nfa','pm_far','pm_bua','pm_lat','pm_lng','pm_video','pm_notes','pm_followup'].forEach(function(f){var el=document.getElementById(f);if(el)el.value='';});
   document.getElementById('pm_status').value='Available';document.getElementById('pm_type').value='';
   document.getElementById('pm_size').value='';document.getElementById('pm_price').value='';
   var prev=document.getElementById('pm_imgPrev'),ph=document.getElementById('pm_imgPH');
@@ -1858,6 +1863,7 @@ window.openPlotModal=function(id){
     document.getElementById('pm_bua').value=p.bua||'';document.getElementById('pm_lat').value=p.lat||'';
     document.getElementById('pm_lng').value=p.lng||'';document.getElementById('pm_video').value=p.videoUrl||'';
     document.getElementById('pm_notes').value=p.notes||'';
+      document.getElementById('pm_followup').value=p.followUp||'';
     if(p.image&&p.image.length>10){if(prev){prev.src=p.image;prev.style.display='block';}if(ph)ph.style.display='none';}
   } else document.getElementById('pm_title').textContent='Add New Plot';
 };
@@ -1873,7 +1879,7 @@ function savePlot(){
   var existingId=parseInt(document.getElementById('pm_id').value)||0;
   var prev=document.getElementById('pm_imgPrev');
   var imgSrc=(prev&&prev.src&&prev.src!==window.location.href&&prev.style.display!=='none')?prev.src:'';
-  var obj={id:existingId||Date.now(),no:no,dev:dev,status:document.getElementById('pm_status').value,type:document.getElementById('pm_type').value,size:size,price:price,gfa:document.getElementById('pm_gfa').value.trim(),nfa:document.getElementById('pm_nfa').value.trim(),far:document.getElementById('pm_far').value.trim(),bua:document.getElementById('pm_bua').value.trim(),lat:document.getElementById('pm_lat').value.trim(),lng:document.getElementById('pm_lng').value.trim(),videoUrl:document.getElementById('pm_video').value.trim(),notes:document.getElementById('pm_notes').value.trim(),image:imgSrc};
+  var obj={id:existingId||Date.now(),no:no,dev:dev,status:document.getElementById('pm_status').value,type:document.getElementById('pm_type').value,size:size,price:price,gfa:document.getElementById('pm_gfa').value.trim(),nfa:document.getElementById('pm_nfa').value.trim(),far:document.getElementById('pm_far').value.trim(),bua:document.getElementById('pm_bua').value.trim(),lat:document.getElementById('pm_lat').value.trim(),lng:document.getElementById('pm_lng').value.trim(),videoUrl:document.getElementById('pm_video').value.trim(),notes:document.getElementById('pm_notes').value.trim(),followUp:document.getElementById('pm_followup').value.trim(),image:imgSrc};
   if(existingId){var idx=plots.findIndex(function(p){return p.id===existingId;});if(idx!==-1)plots[idx]=obj;else plots.push(obj);}else plots.push(obj);
   filteredPlots=plots.slice();saveToLocalStorage();populateTable();addPlotMarkers();updateTotalPlotsBadge();closePlotModal();
   showToastNotification(existingId?'Plot updated!':'Plot added!','success');
@@ -2293,7 +2299,7 @@ window.printPlot=function(id){
   if(hasImage){
     /* Use the uploaded photo */
     photoHTML='<div style="position:relative;margin-bottom:14px;">'+
-      '<img src="'+p.image+'" style="width:100%;height:190px;object-fit:cover;border-radius:10px;border:1px solid #e2e8f0;display:block;" alt="Plot Photo">'+
+      '<img src="'+p.image+'" style="width:100%;height:380px;object-fit:cover;border-radius:10px;border:1px solid #e2e8f0;display:block;" alt="Plot Photo">'+
       '<div style="position:absolute;bottom:6px;left:6px;background:rgba(0,0,0,0.6);color:white;font-size:8px;font-weight:700;padding:2px 7px;border-radius:4px;letter-spacing:0.5px;">PLOT PHOTO</div>'+
     '</div>';
   } else if(hasGps){
@@ -2302,7 +2308,7 @@ window.printPlot=function(id){
     var zoom=isApprox?13:16;
     /* OSM staticmap.de: free, no key, returns a real PNG image */
     var osmUrl='https://staticmap.openstreetmap.de/staticmap.php?center='+latS+','+lngS+
-      '&zoom='+zoom+'&size=500x200&markers='+latS+','+lngS+',red-pushpin';
+      '&zoom='+zoom+'&size=800x400&markers='+latS+','+lngS+',red-pushpin';
     /* Fallback: use a known OSM tile URL (single tile centred on location) as last resort */
     var tileZ=isApprox?13:16;
     var tileX=Math.floor((pLng+180)/360*Math.pow(2,tileZ));
@@ -2312,7 +2318,7 @@ window.printPlot=function(id){
     photoHTML='<div style="position:relative;margin-bottom:14px;">'+
       /* Primary: OSM static map PNG */
       '<img id="osmStaticMap" src="'+osmUrl+'" '+
-        'style="width:100%;height:190px;object-fit:cover;border-radius:10px;border:1px solid #bae6fd;display:block;" '+
+        'style="width:100%;height:380px;object-fit:cover;border-radius:10px;border:1px solid #bae6fd;display:block;" '+
         'alt="Plot location on OpenStreetMap" '+
         /* On error: try single OSM tile */
         'onerror="this.onerror=null;this.src=\''+fallbackUrl+'\';this.style.objectFit=\'cover\';">'+
@@ -2326,7 +2332,7 @@ window.printPlot=function(id){
     mapInitScript=''; /* no JS map needed */
   } else {
     /* No photo, no GPS */
-    photoHTML='<div style="width:100%;height:190px;background:linear-gradient(135deg,#f1f5f9,#e2e8f0);border-radius:10px;margin-bottom:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#94a3b8;font-size:11px;border:1px solid #e2e8f0;">'+
+    photoHTML='<div style="width:100%;height:380px;background:linear-gradient(135deg,#f1f5f9,#e2e8f0);border-radius:10px;margin-bottom:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#94a3b8;font-size:11px;border:1px solid #e2e8f0;">'+
       '<div style="font-size:36px;margin-bottom:8px;">&#128247;</div><div>No Photo / No GPS</div>'+
     '</div>';
   }
@@ -2413,7 +2419,6 @@ window.printPlot=function(id){
           (p.notes?'<div class="sec">Notes</div><div class="nbox">'+esc(p.notes)+'</div>':'')+
         '</div>'+
         '<div class="col-s">'+
-          photoHTML+
           '<div class="idc"><div class="idc-l">Plot Reference</div><div class="idc-v">'+esc(reportId)+'</div></div>'+
           '<div class="sec" style="margin-top:0;">Property Details</div>'+
           '<div class="irow"><span class="il">Status</span><span class="iv" style="color:'+sbc+'">'+esc(p.status||'—')+'</span></div>'+
@@ -2421,7 +2426,11 @@ window.printPlot=function(id){
           '<div class="irow"><span class="il">Development</span><span class="iv" style="font-size:9px;">'+esc(p.dev||'—')+'</span></div>'+
           (p.videoUrl?'<div class="irow"><span class="il">Video Tour</span><span class="iv" style="color:#6366f1;">Available</span></div>':'')+
           (hasGps?'<div class="irow"><span class="il">GPS</span><span class="iv" style="font-size:9px;">'+esc(p.lat)+'<br>'+esc(p.lng)+(isApprox?'<br><span style="color:#d97706;">approx.</span>':'')+'</span></div>':'')+
+          (p.followUp?'<div class="irow" style="flex-direction:column;gap:3px;"><span class="il">Follow Up Note</span><span class="iv" style="text-align:left;font-size:9px;">'+esc(p.followUp)+'</span></div>':'')+
           (!hasImage&&hasGps?'<div style="font-size:8px;color:#64748b;margin-top:8px;padding:5px 0;border-top:1px solid #f1f5f9;">Map: OpenStreetMap &bull; '+(isApprox?'Approximate location':'Exact GPS location')+'</div>':'')+
+        '</div>'+
+        '<div style="padding:0 28px 20px 28px;">'+
+          photoHTML+
         '</div>'+
       '</div>'+
       '<div class="foot">'+
@@ -2585,6 +2594,7 @@ function connectSync(autoRoom){
         plots.forEach(function(p){
           var sp = JSON.parse(JSON.stringify(p));
           if(typeof sp.image==='string'&&sp.image.startsWith('data:')) sp.image='';
+          delete sp.followUp;
           _fbRoomRef.child(String(p.id).replace(/\./g, '_')).set(sp);
         });
       }
@@ -2598,6 +2608,7 @@ function connectSync(autoRoom){
         toPush.forEach(function(p){
           var sp = JSON.parse(JSON.stringify(p));
           if(typeof sp.image==='string'&&sp.image.startsWith('data:')) sp.image='';
+          delete sp.followUp;
           _fbRoomRef.child(String(p.id).replace(/\./g, '_')).set(sp);
         });
       }
@@ -2745,7 +2756,7 @@ function _setMbnActive(id){
 }
 window.openMobileMenu=openMobileMenu;window.closeMobileMenu=closeMobileMenu;window.closeSidebarMobile=closeSidebarMobile;window._setMbnActive=_setMbnActive;
 
-function showToastNotification(msg,type){var wrap=document.getElementById('toastWrap');if(!wrap)return;var t=document.createElement('div');t.className='toast '+(type||'info');var icon=type==='success'?'check-circle':type==='error'?'exclamation-circle':'info-circle';t.innerHTML='<i class="fas fa-'+icon+'" style="margin-right:7px;"></i>'+esc(msg);wrap.appendChild(t);setTimeout(function(){t.style.animation='toastOut 0.3s ease forwards';setTimeout(function(){if(t.parentNode)t.parentNode.removeChild(t);},300);},3500);}
+function showToastNotification(msg,type){var wrap=document.getElementById('toastWrap');if(!wrap)return;var t=document.createElement('div');t.className='toast '+(type||'info');var icon=type==='success'?'check-circle':type==='error'?'exclamation-circle':'info-circle';t.innerHTML='<i class="fas fa-'+icon+'" style="margin-right:7px;"></i>'+esc(msg);wrap.appendChild(t);setTimeout(function(){t.style.animation='toastOut 0.3s ease forwards';setTimeout(function(){if(t.parentNode)t.parentNode.removeChild(t);},300);},6500);}
 
 function esc(str){if(str===null||str===undefined)return'';return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 /* Robust number parser: strips commas, currency symbols, units, spaces */
@@ -2758,6 +2769,32 @@ function pricePerSqft(price,size){var pr=parseNum(price),sz=parseNum(size);if(is
 window.showSyncModal=showSyncModal;window.connectSync=connectSync;window.disconnectSync=disconnectSync;window.pushSync=pushSync;window.pullSync=pullSync;window.startAutoSync=startAutoSync;
 window.startSetOnMapMode=startSetOnMapMode;window.startSetOnMapModeForPlot=startSetOnMapModeForPlot;window.cancelSetOnMapMode=cancelSetOnMapMode;
 window.setOwnerCode=setOwnerCode;window.showOwnerCodeSetup=showOwnerCodeSetup;window.unlockOwner=unlockOwner;window.lockOwner=lockOwner;window.extractLatLngFromUrl=extractLatLngFromUrl;window.resolveMapsUrls=resolveMapsUrls;window.resolveGoogleMapsUrl=resolveGoogleMapsUrl;window.resolveAndPinPlot=resolveAndPinPlot;window.applyPastedGpsUrl=applyPastedGpsUrl;
+window.generateUNIDO = function(id) {
+  var p = plots.find(function(x){return x.id===id;});
+  if(!p) return;
+  var promptText = "Please act as an expert real estate feasibility analyst. I need a UNIDO standard pre-feasibility study for the following plot of land.\n\n";
+  promptText += "PLOT DETAILS:\n";
+  promptText += "- Plot No: " + (p.no||'N/A') + "\n";
+  promptText += "- Development: " + (p.dev||'N/A') + "\n";
+  promptText += "- Land Size: " + (p.size||'N/A') + " sqft\n";
+  promptText += "- Total Price: AED " + (p.price||'N/A') + "\n";
+  if(p.type) promptText += "- Type/Usage: " + p.type + "\n";
+  if(p.gfa) promptText += "- GFA: " + p.gfa + " sqft\n";
+  if(p.far) promptText += "- FAR: " + p.far + "\n";
+  if(p.notes) promptText += "- Notes: " + p.notes + "\n";
+  promptText += "\nPlease provide a structured analysis including:\n1. Executive Summary\n2. Market & Demand Analysis\n3. Technical Feasibility\n4. Financial Analysis (Estimated ROI, Construction Costs)\n5. Risk Assessment\n6. Final Recommendation.";
+  
+  if(navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(promptText).then(function(){
+      showToastNotification('UNIDO AI Prompt copied! Paste it into ChatGPT or Gemini.', 'success');
+    }).catch(function(){
+      prompt('Copy this prompt for ChatGPT:', promptText);
+    });
+  } else {
+    prompt('Copy this prompt for ChatGPT:', promptText);
+  }
+};
+
 window.savePlot=savePlot;window.closeCard=closeCard;window.deletePlot=deletePlot;window.selectPlot=selectPlot;window.changePlotStatusFromCard=changePlotStatusFromCard;window.togglePlotView=togglePlotView;window.toggleSelection=toggleSelection;window.toggleSelectAll=toggleSelectAll;window.bulkDelete=bulkDelete;window.bulkExport=bulkExport;window.applyFilters=applyFilters;window.clearFilters=clearFilters;window.filterByStatus=filterByStatus;window.debounceSearch=debounceSearch;window.importPlots=importPlots;window.closeImportModal=closeImportModal;window.handleFileSelect=handleFileSelect;window.confirmImport=confirmImport;window.exportCSV=exportCSV;window.startDistanceCalculator=startDistanceCalculator;window.startBufferAnalysis=startBufferAnalysis;window.toggleHeatmap=toggleHeatmap;window.toggleProximityAmenities=toggleProximityAmenities;window.geocodeAddress=geocodeAddress;window.setMapStyle=setMapStyle;window.startAreaMeasurement=startAreaMeasurement;window.showCRMModal=showCRMModal;window.connectGoogleCalendar=connectGoogleCalendar;window.showOfflineSyncModal=showOfflineSyncModal;window.updateTotalPlotsBadge=updateTotalPlotsBadge;window.showToastNotification=showToastNotification;window.toggleSidebar=toggleSidebar;window.logout=logout;window.continueAsGuest=continueAsGuest;window.login=login;window.toggleOnlineSync=toggleOnlineSync;window.saveToLocalStorage=saveToLocalStorage;window.loadFromLocalStorage=loadFromLocalStorage;window.addPlotMarkers=addPlotMarkers;window.populateTable=populateTable;window.updateLegendCounts=updateLegendCounts;window._shareWhatsapp=_shareWhatsapp;window._shareEmail=_shareEmail;window._shareCopy=_shareCopy;window._sharePrint=_sharePrint;window._shareCall=_shareCall;
 
 window.onload=function(){
