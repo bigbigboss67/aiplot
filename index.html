@@ -380,8 +380,7 @@ body{background:#0f172a;color:#e2e8f0;font-family:Inter,system-ui,sans-serif;hei
       <div class="fsection">
         <div class="fsectitle">Notes</div>
         <div class="fgroup"><textarea id="pm_notes" placeholder="Additional notes..."></textarea></div>
-        <div class="fsectitle" style="margin-top:15px;color:#f59e0b;">Follow Up (Local Only)</div>
-        <div class="fgroup"><textarea id="pm_followup" placeholder="Who was it sent to? What was the answer? (Not synced)"></textarea></div>
+        
       </div>
     </div>
     <div class="mfoot">
@@ -565,7 +564,7 @@ function saveToLocalStorage(){
     plots.forEach(function(p){
       var sp = JSON.parse(JSON.stringify(p));
           if(typeof sp.image==='string'&&sp.image.startsWith('data:')) sp.image='';
-          delete sp.followUp;
+          delete sp._followUps;
           _fbRoomRef.child(String(p.id).replace(/\./g, '_')).set(sp);
     });
   }
@@ -1833,6 +1832,7 @@ function selectPlot(id){
       '<button class="btn" style="background:#7c3aed;color:white;justify-content:center;font-size:11px;padding:7px 4px;" onclick="startVideoCall('+pid+')"><i class="fas fa-video"></i> Call</button>'+
       '<button class="btn" style="background:#0284c7;color:white;justify-content:center;font-size:11px;padding:7px 4px;grid-column:span 2;" onclick="closeCard(); togglePlotView(\'map\'); map.flyTo(['+p.lat+','+p.lng+'], 18);"><i class="fas fa-map-marker-alt"></i> Show on Map</button>'+
       '<button class="btn" style="background:#f59e0b;color:white;justify-content:center;font-size:11px;padding:7px 4px;grid-column:span 2;" onclick="generateUNIDO('+pid+')"><i class="fas fa-brain"></i> Generate UNIDO Feasibility</button>'+
+      '<button class="btn" style="background:#10b981;color:white;justify-content:center;font-size:11px;padding:7px 4px;grid-column:span 2;" onclick="openCRMModal('+pid+')"><i class="fas fa-address-book"></i> Follow-Up Log</button>'+
     '</div>'+
     '<button class="btn btnd" onclick="deletePlot('+pid+')"><i class="fas fa-trash"></i> Delete Plot</button>'+
     '<button class="fbtn" style="margin-top:7px;width:100%;text-align:center;" onclick="closeCard()"><i class="fas fa-times"></i> Close</button>'+
@@ -1847,7 +1847,7 @@ function deletePlot(id){if(!confirm('Delete this plot?'))return;plots=plots.filt
 
 window.openPlotModal=function(id){
   var modal=document.getElementById('plotModal');modal.classList.remove('hidden');
-  ['pm_id','pm_no','pm_dev','pm_gfa','pm_nfa','pm_far','pm_bua','pm_lat','pm_lng','pm_video','pm_notes','pm_followup'].forEach(function(f){var el=document.getElementById(f);if(el)el.value='';});
+  ['pm_id','pm_no','pm_dev','pm_gfa','pm_nfa','pm_far','pm_bua','pm_lat','pm_lng','pm_video','pm_notes'].forEach(function(f){var el=document.getElementById(f);if(el)el.value='';});
   document.getElementById('pm_status').value='Available';document.getElementById('pm_type').value='';
   document.getElementById('pm_size').value='';document.getElementById('pm_price').value='';
   var prev=document.getElementById('pm_imgPrev'),ph=document.getElementById('pm_imgPH');
@@ -1863,7 +1863,7 @@ window.openPlotModal=function(id){
     document.getElementById('pm_bua').value=p.bua||'';document.getElementById('pm_lat').value=p.lat||'';
     document.getElementById('pm_lng').value=p.lng||'';document.getElementById('pm_video').value=p.videoUrl||'';
     document.getElementById('pm_notes').value=p.notes||'';
-      document.getElementById('pm_followup').value=p.followUp||'';
+      
     if(p.image&&p.image.length>10){if(prev){prev.src=p.image;prev.style.display='block';}if(ph)ph.style.display='none';}
   } else document.getElementById('pm_title').textContent='Add New Plot';
 };
@@ -1879,7 +1879,7 @@ function savePlot(){
   var existingId=parseInt(document.getElementById('pm_id').value)||0;
   var prev=document.getElementById('pm_imgPrev');
   var imgSrc=(prev&&prev.src&&prev.src!==window.location.href&&prev.style.display!=='none')?prev.src:'';
-  var obj={id:existingId||Date.now(),no:no,dev:dev,status:document.getElementById('pm_status').value,type:document.getElementById('pm_type').value,size:size,price:price,gfa:document.getElementById('pm_gfa').value.trim(),nfa:document.getElementById('pm_nfa').value.trim(),far:document.getElementById('pm_far').value.trim(),bua:document.getElementById('pm_bua').value.trim(),lat:document.getElementById('pm_lat').value.trim(),lng:document.getElementById('pm_lng').value.trim(),videoUrl:document.getElementById('pm_video').value.trim(),notes:document.getElementById('pm_notes').value.trim(),followUp:document.getElementById('pm_followup').value.trim(),image:imgSrc};
+  var obj={id:existingId||Date.now(),no:no,dev:dev,status:document.getElementById('pm_status').value,type:document.getElementById('pm_type').value,size:size,price:price,gfa:document.getElementById('pm_gfa').value.trim(),nfa:document.getElementById('pm_nfa').value.trim(),far:document.getElementById('pm_far').value.trim(),bua:document.getElementById('pm_bua').value.trim(),lat:document.getElementById('pm_lat').value.trim(),lng:document.getElementById('pm_lng').value.trim(),videoUrl:document.getElementById('pm_video').value.trim(),notes:document.getElementById('pm_notes').value.trim(),image:imgSrc};
   if(existingId){var idx=plots.findIndex(function(p){return p.id===existingId;});if(idx!==-1)plots[idx]=obj;else plots.push(obj);}else plots.push(obj);
   filteredPlots=plots.slice();saveToLocalStorage();populateTable();addPlotMarkers();updateTotalPlotsBadge();closePlotModal();
   showToastNotification(existingId?'Plot updated!':'Plot added!','success');
@@ -2439,7 +2439,60 @@ window.printPlot=function(id){
       '</div>'+
     '</div>'+
     '<button class="pbtn" onclick="window.print()">&#128424; Print / Save PDF</button>'+
-    '</body></html>';
+    '
+<!-- AI Settings Modal -->
+<div id="aiSettingsModal" class="moverlay hidden">
+  <div class="mbox">
+    <div class="mhdr"><h2><i class="fas fa-robot" style="color:#6366f1;margin-right:7px;"></i>AI Settings</h2><button class="mclose" onclick="closeAiSettings()">&times;</button></div>
+    <div class="mbody" style="padding-bottom:5px;">
+      <p style="font-size:12px;color:#94a3b8;margin-bottom:15px;">To enable direct AI Feasibility Generation, enter a free Gemini API Key from Google AI Studio.</p>
+      <div class="fgroup">
+        <label>Gemini API Key</label>
+        <input type="password" id="aiApiKey" placeholder="AIzaSy...">
+      </div>
+    </div>
+    <div class="mfoot">
+      <button class="btn btns" onclick="closeAiSettings()">Cancel</button>
+      <button class="btn btnp" onclick="saveAiSettings()"><i class="fas fa-save"></i> Save Key</button>
+    </div>
+  </div>
+</div>
+
+<!-- AI Chat Modal -->
+<div id="aiChatModal" class="moverlay hidden">
+  <div class="mbox mbox-lg">
+    <div class="mhdr"><h2><i class="fas fa-brain" style="color:#f59e0b;margin-right:7px;"></i>AI Feasibility Report</h2><button class="mclose" onclick="document.getElementById('aiChatModal').classList.add('hidden');">&times;</button></div>
+    <div class="mbody">
+      <div id="aiChatOutput" style="background:#0f172a;border:1px solid #334155;border-radius:9px;padding:15px;height:450px;overflow-y:auto;color:#e2e8f0;font-size:13px;line-height:1.6;white-space:pre-wrap;margin-bottom:10px;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Follow Up CRM Modal -->
+<div id="crmModal" class="moverlay hidden">
+  <div class="mbox mbox-lg">
+    <div class="mhdr"><h2><i class="fas fa-address-book" style="color:#10b981;margin-right:7px;"></i>Follow-Up Log (Local)</h2><button class="mclose" onclick="document.getElementById('crmModal').classList.add('hidden');">&times;</button></div>
+    <div class="mbody" style="padding-bottom:5px;">
+      <input type="hidden" id="crm_plotId">
+      <div style="font-size:14px;font-weight:700;color:#f8fafc;margin-bottom:10px;" id="crm_plotTitle"></div>
+      
+      <div id="crm_list" style="max-height:250px;overflow-y:auto;margin-bottom:20px;border:1px solid #334155;border-radius:8px;background:#0f172a;padding:10px;"></div>
+      
+      <div style="background:#1e293b;border-radius:9px;padding:15px;border:1px solid #334155;">
+        <div style="font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px;">Add New Record</div>
+        <div class="mgrid" style="grid-template-columns:1fr 1fr;gap:10px;">
+          <div class="fgroup" style="margin:0;"><label>Contact Name</label><input type="text" id="crm_name" placeholder="John Doe"></div>
+          <div class="fgroup" style="margin:0;"><label>Email</label><input type="email" id="crm_email" placeholder="john@example.com"></div>
+          <div class="fgroup" style="margin:0;"><label>WhatsApp / Tel</label><input type="text" id="crm_tel" placeholder="+971 50..."></div>
+          <div class="fgroup" style="margin:0;"><label>Date</label><input type="date" id="crm_date"></div>
+          <div class="fgroup" style="grid-column:span 2;margin:0;"><label>Answer / Notes</label><textarea id="crm_notes" placeholder="Outcome of communication..." style="height:60px;"></textarea></div>
+        </div>
+        <button onclick="saveCRMRecord()" style="margin-top:10px;width:100%;background:#10b981;color:white;border:none;border-radius:7px;padding:10px;font-weight:700;cursor:pointer;"><i class="fas fa-plus"></i> Add Record</button>
+      </div>
+    </div>
+  </div>
+</div>
+</body></html>';
   var w=window.open('','_blank','width=960,height=780');
   if(!w){showToastNotification('Popup blocked — allow popups for this site and try again.','error');return;}
   w.document.write(html);w.document.close();w.focus();
@@ -2594,7 +2647,7 @@ function connectSync(autoRoom){
         plots.forEach(function(p){
           var sp = JSON.parse(JSON.stringify(p));
           if(typeof sp.image==='string'&&sp.image.startsWith('data:')) sp.image='';
-          delete sp.followUp;
+          delete sp._followUps;
           _fbRoomRef.child(String(p.id).replace(/\./g, '_')).set(sp);
         });
       }
@@ -2608,7 +2661,7 @@ function connectSync(autoRoom){
         toPush.forEach(function(p){
           var sp = JSON.parse(JSON.stringify(p));
           if(typeof sp.image==='string'&&sp.image.startsWith('data:')) sp.image='';
-          delete sp.followUp;
+          delete sp._followUps;
           _fbRoomRef.child(String(p.id).replace(/\./g, '_')).set(sp);
         });
       }
@@ -2756,7 +2809,7 @@ function _setMbnActive(id){
 }
 window.openMobileMenu=openMobileMenu;window.closeMobileMenu=closeMobileMenu;window.closeSidebarMobile=closeSidebarMobile;window._setMbnActive=_setMbnActive;
 
-function showToastNotification(msg,type){var wrap=document.getElementById('toastWrap');if(!wrap)return;var t=document.createElement('div');t.className='toast '+(type||'info');var icon=type==='success'?'check-circle':type==='error'?'exclamation-circle':'info-circle';t.innerHTML='<i class="fas fa-'+icon+'" style="margin-right:7px;"></i>'+esc(msg);wrap.appendChild(t);setTimeout(function(){t.style.animation='toastOut 0.3s ease forwards';setTimeout(function(){if(t.parentNode)t.parentNode.removeChild(t);},300);},6500);}
+function showToastNotification(msg,type){var wrap=document.getElementById('toastWrap');if(!wrap)return;var t=document.createElement('div');t.className='toast '+(type||'info');var icon=type==='success'?'check-circle':type==='error'?'exclamation-circle':'info-circle';t.innerHTML='<i class="fas fa-'+icon+'" style="margin-right:7px;"></i>'+esc(msg);wrap.appendChild(t);setTimeout(function(){t.style.animation='toastOut 0.3s ease forwards';setTimeout(function(){if(t.parentNode)t.parentNode.removeChild(t);},300);},10000);}
 
 function esc(str){if(str===null||str===undefined)return'';return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 /* Robust number parser: strips commas, currency symbols, units, spaces */
@@ -2847,6 +2900,59 @@ window.onload=function(){
   }
 };
 </script>
+
+<!-- AI Settings Modal -->
+<div id="aiSettingsModal" class="moverlay hidden">
+  <div class="mbox">
+    <div class="mhdr"><h2><i class="fas fa-robot" style="color:#6366f1;margin-right:7px;"></i>AI Settings</h2><button class="mclose" onclick="closeAiSettings()">&times;</button></div>
+    <div class="mbody" style="padding-bottom:5px;">
+      <p style="font-size:12px;color:#94a3b8;margin-bottom:15px;">To enable direct AI Feasibility Generation, enter a free Gemini API Key from Google AI Studio.</p>
+      <div class="fgroup">
+        <label>Gemini API Key</label>
+        <input type="password" id="aiApiKey" placeholder="AIzaSy...">
+      </div>
+    </div>
+    <div class="mfoot">
+      <button class="btn btns" onclick="closeAiSettings()">Cancel</button>
+      <button class="btn btnp" onclick="saveAiSettings()"><i class="fas fa-save"></i> Save Key</button>
+    </div>
+  </div>
+</div>
+
+<!-- AI Chat Modal -->
+<div id="aiChatModal" class="moverlay hidden">
+  <div class="mbox mbox-lg">
+    <div class="mhdr"><h2><i class="fas fa-brain" style="color:#f59e0b;margin-right:7px;"></i>AI Feasibility Report</h2><button class="mclose" onclick="document.getElementById('aiChatModal').classList.add('hidden');">&times;</button></div>
+    <div class="mbody">
+      <div id="aiChatOutput" style="background:#0f172a;border:1px solid #334155;border-radius:9px;padding:15px;height:450px;overflow-y:auto;color:#e2e8f0;font-size:13px;line-height:1.6;white-space:pre-wrap;margin-bottom:10px;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Follow Up CRM Modal -->
+<div id="crmModal" class="moverlay hidden">
+  <div class="mbox mbox-lg">
+    <div class="mhdr"><h2><i class="fas fa-address-book" style="color:#10b981;margin-right:7px;"></i>Follow-Up Log (Local)</h2><button class="mclose" onclick="document.getElementById('crmModal').classList.add('hidden');">&times;</button></div>
+    <div class="mbody" style="padding-bottom:5px;">
+      <input type="hidden" id="crm_plotId">
+      <div style="font-size:14px;font-weight:700;color:#f8fafc;margin-bottom:10px;" id="crm_plotTitle"></div>
+      
+      <div id="crm_list" style="max-height:250px;overflow-y:auto;margin-bottom:20px;border:1px solid #334155;border-radius:8px;background:#0f172a;padding:10px;"></div>
+      
+      <div style="background:#1e293b;border-radius:9px;padding:15px;border:1px solid #334155;">
+        <div style="font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px;">Add New Record</div>
+        <div class="mgrid" style="grid-template-columns:1fr 1fr;gap:10px;">
+          <div class="fgroup" style="margin:0;"><label>Contact Name</label><input type="text" id="crm_name" placeholder="John Doe"></div>
+          <div class="fgroup" style="margin:0;"><label>Email</label><input type="email" id="crm_email" placeholder="john@example.com"></div>
+          <div class="fgroup" style="margin:0;"><label>WhatsApp / Tel</label><input type="text" id="crm_tel" placeholder="+971 50..."></div>
+          <div class="fgroup" style="margin:0;"><label>Date</label><input type="date" id="crm_date"></div>
+          <div class="fgroup" style="grid-column:span 2;margin:0;"><label>Answer / Notes</label><textarea id="crm_notes" placeholder="Outcome of communication..." style="height:60px;"></textarea></div>
+        </div>
+        <button onclick="saveCRMRecord()" style="margin-top:10px;width:100%;background:#10b981;color:white;border:none;border-radius:7px;padding:10px;font-weight:700;cursor:pointer;"><i class="fas fa-plus"></i> Add Record</button>
+      </div>
+    </div>
+  </div>
+</div>
 </body>
 </html>
 
