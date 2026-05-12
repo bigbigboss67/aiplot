@@ -2439,60 +2439,7 @@ window.printPlot=function(id){
       '</div>'+
     '</div>'+
     '<button class="pbtn" onclick="window.print()">&#128424; Print / Save PDF</button>'+
-    '
-<!-- AI Settings Modal -->
-<div id="aiSettingsModal" class="moverlay hidden">
-  <div class="mbox">
-    <div class="mhdr"><h2><i class="fas fa-robot" style="color:#6366f1;margin-right:7px;"></i>AI Settings</h2><button class="mclose" onclick="closeAiSettings()">&times;</button></div>
-    <div class="mbody" style="padding-bottom:5px;">
-      <p style="font-size:12px;color:#94a3b8;margin-bottom:15px;">To enable direct AI Feasibility Generation, enter a free Gemini API Key from Google AI Studio.</p>
-      <div class="fgroup">
-        <label>Gemini API Key</label>
-        <input type="password" id="aiApiKey" placeholder="AIzaSy...">
-      </div>
-    </div>
-    <div class="mfoot">
-      <button class="btn btns" onclick="closeAiSettings()">Cancel</button>
-      <button class="btn btnp" onclick="saveAiSettings()"><i class="fas fa-save"></i> Save Key</button>
-    </div>
-  </div>
-</div>
-
-<!-- AI Chat Modal -->
-<div id="aiChatModal" class="moverlay hidden">
-  <div class="mbox mbox-lg">
-    <div class="mhdr"><h2><i class="fas fa-brain" style="color:#f59e0b;margin-right:7px;"></i>AI Feasibility Report</h2><button class="mclose" onclick="document.getElementById('aiChatModal').classList.add('hidden');">&times;</button></div>
-    <div class="mbody">
-      <div id="aiChatOutput" style="background:#0f172a;border:1px solid #334155;border-radius:9px;padding:15px;height:450px;overflow-y:auto;color:#e2e8f0;font-size:13px;line-height:1.6;white-space:pre-wrap;margin-bottom:10px;"></div>
-    </div>
-  </div>
-</div>
-
-<!-- Follow Up CRM Modal -->
-<div id="crmModal" class="moverlay hidden">
-  <div class="mbox mbox-lg">
-    <div class="mhdr"><h2><i class="fas fa-address-book" style="color:#10b981;margin-right:7px;"></i>Follow-Up Log (Local)</h2><button class="mclose" onclick="document.getElementById('crmModal').classList.add('hidden');">&times;</button></div>
-    <div class="mbody" style="padding-bottom:5px;">
-      <input type="hidden" id="crm_plotId">
-      <div style="font-size:14px;font-weight:700;color:#f8fafc;margin-bottom:10px;" id="crm_plotTitle"></div>
-      
-      <div id="crm_list" style="max-height:250px;overflow-y:auto;margin-bottom:20px;border:1px solid #334155;border-radius:8px;background:#0f172a;padding:10px;"></div>
-      
-      <div style="background:#1e293b;border-radius:9px;padding:15px;border:1px solid #334155;">
-        <div style="font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px;">Add New Record</div>
-        <div class="mgrid" style="grid-template-columns:1fr 1fr;gap:10px;">
-          <div class="fgroup" style="margin:0;"><label>Contact Name</label><input type="text" id="crm_name" placeholder="John Doe"></div>
-          <div class="fgroup" style="margin:0;"><label>Email</label><input type="email" id="crm_email" placeholder="john@example.com"></div>
-          <div class="fgroup" style="margin:0;"><label>WhatsApp / Tel</label><input type="text" id="crm_tel" placeholder="+971 50..."></div>
-          <div class="fgroup" style="margin:0;"><label>Date</label><input type="date" id="crm_date"></div>
-          <div class="fgroup" style="grid-column:span 2;margin:0;"><label>Answer / Notes</label><textarea id="crm_notes" placeholder="Outcome of communication..." style="height:60px;"></textarea></div>
-        </div>
-        <button onclick="saveCRMRecord()" style="margin-top:10px;width:100%;background:#10b981;color:white;border:none;border-radius:7px;padding:10px;font-weight:700;cursor:pointer;"><i class="fas fa-plus"></i> Add Record</button>
-      </div>
-    </div>
-  </div>
-</div>
-</body></html>';
+    '</body></html>';
   var w=window.open('','_blank','width=960,height=780');
   if(!w){showToastNotification('Popup blocked — allow popups for this site and try again.','error');return;}
   w.document.write(html);w.document.close();w.focus();
