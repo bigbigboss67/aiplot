@@ -346,17 +346,17 @@ body{background:#0f172a;color:#e2e8f0;font-family:Inter,system-ui,sans-serif;hei
       <div class="fsection">
         <div class="fsectitle">Financial</div>
         <div class="fgrid">
-          <div class="fgroup"><label>Size (sqm) <span class="rstar">*</span></label><input type="number" id="pm_size" placeholder="e.g. 500"></div>
+          <div class="fgroup"><label>Size (sqft) <span class="rstar">*</span></label><input type="number" id="pm_size" placeholder="e.g. 500"></div>
           <div class="fgroup"><label>Price (AED) <span class="rstar">*</span></label><input type="number" id="pm_price" placeholder="e.g. 2500000"></div>
         </div>
       </div>
       <div class="fsection">
         <div class="fsectitle">Area Metrics (Optional)</div>
         <div class="fgrid">
-          <div class="fgroup"><label>GFA (sqm)</label><input type="text" id="pm_gfa" placeholder="Gross Floor Area"></div>
-          <div class="fgroup"><label>NFA (sqm)</label><input type="text" id="pm_nfa" placeholder="Net Floor Area"></div>
+          <div class="fgroup"><label>GFA (sqft)</label><input type="text" id="pm_gfa" placeholder="Gross Floor Area"></div>
+          <div class="fgroup"><label>NFA (sqft)</label><input type="text" id="pm_nfa" placeholder="Net Floor Area"></div>
           <div class="fgroup"><label>FAR</label><input type="text" id="pm_far" placeholder="Floor Area Ratio"></div>
-          <div class="fgroup"><label>BUA (sqm)</label><input type="text" id="pm_bua" placeholder="Built-Up Area"></div>
+          <div class="fgroup"><label>BUA (sqft)</label><input type="text" id="pm_bua" placeholder="Built-Up Area"></div>
         </div>
       </div>
       <div class="fsection">
@@ -459,10 +459,10 @@ body{background:#0f172a;color:#e2e8f0;font-family:Inter,system-ui,sans-serif;hei
       <select class="fi" id="filterType" onchange="applyFilters()" title="Filter by Type"><option value="">All Types</option><option value="Residential">Residential</option><option value="Commercial">Commercial</option><option value="Mixed Use">Mixed Use</option><option value="Industrial">Industrial</option><option value="Agricultural">Agricultural</option></select>
       <div style="width:1px;height:22px;background:#334155;flex-shrink:0;"></div>
       <!-- Land Size Range -->
-      <span style="font-size:10px;color:#64748b;font-weight:700;white-space:nowrap;">SIZE&nbsp;(sqm)</span>
-      <input class="fi" type="number" id="filterMinSize" placeholder="Min" oninput="debounceSearch()" style="width:72px;" title="Min land size (sqm)">
+      <span style="font-size:10px;color:#64748b;font-weight:700;white-space:nowrap;">SIZE&nbsp;(sqft)</span>
+      <input class="fi" type="number" id="filterMinSize" placeholder="Min" oninput="debounceSearch()" style="width:72px;" title="Min land size (sqft)">
       <span style="color:#475569;font-size:11px;">–</span>
-      <input class="fi" type="number" id="filterMaxSize" placeholder="Max" oninput="debounceSearch()" style="width:72px;" title="Max land size (sqm)">
+      <input class="fi" type="number" id="filterMaxSize" placeholder="Max" oninput="debounceSearch()" style="width:72px;" title="Max land size (sqft)">
       <div style="width:1px;height:22px;background:#334155;flex-shrink:0;"></div>
       <!-- Price Range -->
       <span style="font-size:10px;color:#64748b;font-weight:700;white-space:nowrap;">PRICE&nbsp;(AED)</span>
@@ -561,7 +561,7 @@ function saveToLocalStorage(){
   try{if(currentUser)localStorage.setItem('aiplot_user',JSON.stringify(currentUser));}catch(e){}
   if(_syncActive && _fbRoomRef){
     plots.forEach(function(p){
-      var sp = Object.assign({}, p);
+      var sp = JSON.parse(JSON.stringify(p));
       if(typeof sp.image==='string'&&sp.image.startsWith('data:')) sp.image='';
       _fbRoomRef.child(String(p.id).replace(/\./g, '_')).set(sp);
     });
@@ -1368,7 +1368,7 @@ function parsePDFFile(file,prev,onRows){
 
 function initMap(){
   map=L.map('map',{zoomControl:true}).setView([25.2048,55.2708],10);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{attribution:'&copy; CartoDB',subdomains:'abcd',maxZoom:20}).addTo(map);
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'&copy; ESRI',maxZoom:20}).addTo(map);
   markerCluster=L.markerClusterGroup({chunkedLoading:true,maxClusterRadius:60,spiderfyOnMaxZoom:true});
   map.addLayer(markerCluster);
   addPlotMarkers();
@@ -1416,7 +1416,7 @@ function makePopupHTML(p){
         '<div style="background:#f8fafc;border-radius:7px;padding:7px 9px;border:1px solid #f1f5f9;text-align:center;">'+
           '<div style="font-size:8px;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">AREA</div>'+
           '<div style="font-size:15px;font-weight:900;color:#0f172a;">'+(szOk?fmtN(size):'—')+'</div>'+
-          (szOk?'<div style="font-size:9px;color:#64748b;">sqm &bull; '+fmtN(size*10.764)+' sqft</div>':'')+
+          ''+
         '</div>'+
         '<div style="background:#f0fdf4;border-radius:7px;padding:7px 9px;border:1px solid #dcfce7;text-align:center;">'+
           '<div style="font-size:8px;color:#15803d;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">PRICE</div>'+
@@ -1426,9 +1426,11 @@ function makePopupHTML(p){
       '</div>'+
       (p.notes?'<div style="font-size:10px;color:#64748b;background:#f8fafc;border-radius:5px;padding:5px 8px;margin-bottom:9px;border-left:3px solid '+color+';">'+esc(p.notes.substring(0,90))+(p.notes.length>90?'…':'')+'</div>':'')+
       ((p._gpsMethod==='city'||p._gpsMethod==='default')?'<div style="font-size:10px;background:#fffbeb;border:1px solid #fde68a;border-radius:5px;padding:5px 8px;margin-bottom:9px;color:#92400e;"><i class="fas fa-exclamation-triangle" style="color:#f59e0b;"></i> <b>Approximate location</b> — pin shows '+( p._gpsMethod==='city'?'city center':'UAE center')+'. <a href="#" onclick="resolveAndPinPlot('+pid+');return false;" style="color:#6366f1;">Improve</a></div>':'')+
-      '<button onclick="window._popupOpen('+pid+')" style="width:100%;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;border:none;border-radius:7px;padding:8px;font-size:11px;font-weight:700;cursor:pointer;">'+
-        '&#128269; View Full Details'+
-      '</button>'+
+      '<div style="display:flex;gap:4px;">'+
+        '<button onclick="map.flyTo(['+p.lat+','+p.lng+'], 18, {duration: 1.5})" style="flex:1;background:#3b82f6;color:white;border:none;border-radius:5px;padding:6px;font-size:10px;font-weight:700;cursor:pointer;"><i class="fas fa-search-plus"></i> Zoom</button>'+
+        '<button onclick="togglePlotView(\'table\'); document.getElementById(\'searchInput\').value=\''+esc(p.no)+'\'; applyFilters();" style="flex:1;background:#10b981;color:white;border:none;border-radius:5px;padding:6px;font-size:10px;font-weight:700;cursor:pointer;"><i class="fas fa-table"></i> Table</button>'+
+        '<button onclick="window._popupOpen('+pid+')" style="flex:1;background:#8b5cf6;color:white;border:none;border-radius:5px;padding:6px;font-size:10px;font-weight:700;cursor:pointer;"><i class="fas fa-info-circle"></i> Details</button>'+
+      '</div>'+
     '</div>'+
   '</div>';
 }
@@ -1594,7 +1596,7 @@ function _initSetOnMapClick(){
 function setMapStyle(style){
   if(!map)return;
   map.eachLayer(function(l){if(l instanceof L.TileLayer)map.removeLayer(l);});
-  var u={carto:'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',osm:'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',satellite:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',topo:'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png'};
+  var u={carto:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',osm:'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',satellite:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',topo:'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png'};
   L.tileLayer(u[style]||u.carto,{attribution:'',maxZoom:20}).addTo(map);
   map.addLayer(markerCluster);
 }
@@ -1627,14 +1629,14 @@ function populateTable(){
     var sz=parseNum(p.size),pr=parseNum(p.price);
     var szOk=!isNaN(sz)&&sz>0,prOk=!isNaN(pr)&&pr>0;
     var szSqft=szOk?fmtN(sz*10.764)+' sqft':'';
-    var ppsf=(szOk&&prOk)?('AED '+Math.round(pr/(sz*10.764)).toLocaleString()):'-';
+    var ppsf=(szOk&&prOk)?('AED '+Math.round(pr/sz).toLocaleString()):'-';
     var sel=selectedIds.has(p.id);var pid=p.id;
     var tr=document.createElement('tr');if(sel)tr.className='rowsel';
     tr.innerHTML='<td><input type="checkbox"'+(sel?' checked':'')+' onchange="toggleSelection('+pid+',this.checked)"></td>'+
       '<td style="font-weight:700;color:#f1f5f9;">'+esc(p.no)+'<br><span style="font-size:9px;color:#64748b;font-weight:normal;background:#1e293b;padding:1px 4px;border-radius:3px;display:inline-block;margin-top:3px;">'+esc(p.uid||'')+'</span></td>'+
       '<td style="color:#94a3b8;">'+esc(p.dev||'—')+'</td>'+
       '<td style="color:#94a3b8;">'+esc(p.type||'—')+'</td>'+
-      '<td><div style="font-weight:600;color:#e2e8f0;">'+(szOk?fmtN(sz)+' sqm':'—')+'</div>'+(szSqft?'<div style="font-size:10px;color:#64748b;">'+szSqft+'</div>':'')+'</td>'+
+      '<td><div style="font-weight:600;color:#e2e8f0;">'+(szOk?fmtN(sz)+' sqft':'—')+'</div>'+(szSqft?'<div style="font-size:10px;color:#64748b;">'+szSqft+'</div>':'')+'</td>'+
       '<td><div style="font-weight:700;color:#34d399;">'+(prOk?'AED '+fmtN(pr):'—')+'</div></td>'+
       '<td style="color:#94a3b8;">'+ppsf+'</td>'+
       '<td><span class="sbadge sb-'+(p.status||'Available')+'">'+esc(p.status||'Available')+'</span></td>'+
@@ -1688,7 +1690,7 @@ function selectPlot(id){
   var price=parseNum(p.price),size=parseNum(p.size),gfaN=parseNum(p.gfa);
   var szOk=!isNaN(size)&&size>0,prOk=!isNaN(price)&&price>0,gfaOk=!isNaN(gfaN)&&gfaN>0;
   var ppsf=(szOk&&prOk)?pricePerSqft(price,size):'—';
-  var ppsm=(szOk&&prOk)?'AED '+Math.round(price/size).toLocaleString()+'/sqm':'—';
+  var ppsm=(szOk&&prOk)?'AED '+Math.round(price/size).toLocaleString()+'/sqft':'—';
   var totalM=prOk?(price/1000000).toFixed(3)+' M AED':'—';
   var szSqft=szOk?fmtN(size*10.764)+' sqft':'—';
   var hasGps=p.lat&&p.lng&&!isNaN(parseNum(p.lat));
@@ -1701,9 +1703,9 @@ function selectPlot(id){
 
   /* ── Area metrics table ── */
   var areaRows='';
-  if(p.gfa)areaRows+='<tr><td style="color:#64748b;padding:3px 6px 3px 0;">GFA</td><td style="font-weight:600;color:#e2e8f0;">'+esc(p.gfa)+' sqm</td></tr>';
-  if(p.nfa)areaRows+='<tr><td style="color:#64748b;padding:3px 6px 3px 0;">NFA</td><td style="font-weight:600;color:#e2e8f0;">'+esc(p.nfa)+' sqm</td></tr>';
-  if(p.bua)areaRows+='<tr><td style="color:#64748b;padding:3px 6px 3px 0;">BUA</td><td style="font-weight:600;color:#e2e8f0;">'+esc(p.bua)+' sqm</td></tr>';
+  if(p.gfa)areaRows+='<tr><td style="color:#64748b;padding:3px 6px 3px 0;">GFA</td><td style="font-weight:600;color:#e2e8f0;">'+esc(p.gfa)+' sqft</td></tr>';
+  if(p.nfa)areaRows+='<tr><td style="color:#64748b;padding:3px 6px 3px 0;">NFA</td><td style="font-weight:600;color:#e2e8f0;">'+esc(p.nfa)+' sqft</td></tr>';
+  if(p.bua)areaRows+='<tr><td style="color:#64748b;padding:3px 6px 3px 0;">BUA</td><td style="font-weight:600;color:#e2e8f0;">'+esc(p.bua)+' sqft</td></tr>';
   if(p.far)areaRows+='<tr><td style="color:#64748b;padding:3px 6px 3px 0;">FAR</td><td style="font-weight:600;color:#e2e8f0;">'+esc(p.far)+'</td></tr>';
   if(p.pricePerGfa)areaRows+='<tr><td style="color:#64748b;padding:3px 6px 3px 0;">AED/GFA</td><td style="font-weight:600;color:#e2e8f0;">'+esc(p.pricePerGfa)+'</td></tr>';
   if(p.height)areaRows+='<tr><td style="color:#64748b;padding:3px 6px 3px 0;">Height</td><td style="font-weight:600;color:#e2e8f0;">'+esc(p.height)+'</td></tr>';
@@ -1795,11 +1797,10 @@ function selectPlot(id){
     photoHtml+
     /* Financial cards */
     '<div class="mgrid" style="margin-bottom:10px;">'+
-      '<div class="mcard"><div class="mlabel">Land Size</div><div class="mval">'+(szOk?fmtN(size)+' sqm':'—')+'</div><div style="font-size:9px;color:#475569;">'+szSqft+'</div></div>'+
+      '<div class="mcard"><div class="mlabel">Land Size</div><div class="mval">'+(szOk?fmtN(size)+' sqft':'—')+'</div></div>'+
       '<div class="mcard"><div class="mlabel">Land Cost</div><div class="mval grn">'+(prOk?'AED '+fmtN(price):'—')+'</div></div>'+
       '<div class="mcard"><div class="mlabel">Price/sqft</div><div class="mval">'+ppsf+'</div></div>'+
-      '<div class="mcard"><div class="mlabel">Price/sqm</div><div class="mval">'+ppsm+'</div></div>'+
-      '<div class="mcard" style="grid-column:span 2;"><div class="mlabel">Total Value</div><div class="mval">'+totalM+'</div></div>'+
+      '<div class="mcard"><div class="mlabel">Total Value</div><div class="mval">'+totalM+'</div></div>'+
     '</div>'+
     /* Area metrics */
     (areaRows?'<div style="background:#0f172a;border-radius:9px;padding:9px 11px;margin-bottom:9px;"><div style="font-size:9px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Floor Area Metrics</div><table style="width:100%;border-collapse:collapse;font-size:11px;">'+areaRows+'</table></div>':'')+
@@ -1826,6 +1827,7 @@ function selectPlot(id){
       '<button class="btn" style="background:#334155;color:#94a3b8;justify-content:center;font-size:11px;padding:7px 4px;" onclick="printPlot('+pid+')"><i class="fas fa-print"></i> Print</button>'+
       '<button class="btn" style="background:#059669;color:white;justify-content:center;font-size:11px;padding:7px 4px;" onclick="showSendOptions('+pid+')"><i class="fas fa-share-alt"></i> Share</button>'+
       '<button class="btn" style="background:#7c3aed;color:white;justify-content:center;font-size:11px;padding:7px 4px;" onclick="startVideoCall('+pid+')"><i class="fas fa-video"></i> Call</button>'+
+      '<button class="btn" style="background:#0284c7;color:white;justify-content:center;font-size:11px;padding:7px 4px;grid-column:span 2;" onclick="closeCard(); togglePlotView(\'map\'); map.flyTo(['+p.lat+','+p.lng+'], 18);"><i class="fas fa-map-marker-alt"></i> Show on Map</button>'+
     '</div>'+
     '<button class="btn btnd" onclick="deletePlot('+pid+')"><i class="fas fa-trash"></i> Delete Plot</button>'+
     '<button class="fbtn" style="margin-top:7px;width:100%;text-align:center;" onclick="closeCard()"><i class="fas fa-times"></i> Close</button>'+
@@ -1910,13 +1912,13 @@ var _importFields=[
   {key:'saleType',    label:'For / Sale Type',    group:'prop'},
   {key:'propUse',     label:'Property Use',       group:'prop'},
   /* ── FINANCIALS ── */
-  {key:'size',        label:'Land Size (sqm)',    group:'fin'},
+  {key:'size',        label:'Land Size (sqft)',    group:'fin'},
   {key:'price',       label:'Land Cost (AED)',    group:'fin'},
-  {key:'gfa',         label:'GFA (sqm)',          group:'fin'},
-  {key:'nfa',         label:'NFA (sqm)',          group:'fin'},
+  {key:'gfa',         label:'GFA (sqft)',          group:'fin'},
+  {key:'nfa',         label:'NFA (sqft)',          group:'fin'},
   {key:'far',         label:'FAR',                group:'fin'},
   {key:'pricePerGfa', label:'Price per GFA',      group:'fin'},
-  {key:'bua',         label:'BUA (sqm)',          group:'fin'},
+  {key:'bua',         label:'BUA (sqft)',          group:'fin'},
   {key:'height',      label:'Height / Floors',    group:'fin'},
   /* ── LOCATION ── */
   {key:'lat',         label:'Latitude',           group:'loc'},
@@ -1944,10 +1946,10 @@ function _autoMatchCols(headers){
     type:       ['property type','prop type','type','land type','land use','category','class','usage','zoning'],
     saleType:   ['for','sale type','sale mode','listing type','offer type'],
     propUse:    ['property use','prop use','intended use','use'],
-    size:       ['land size sq','land size','plot size sq','plot size','area sq','area sqm','sqm','land area','gross area','plot area','size sq','size'],
+    size:       ['land size sq','land size','plot size sq','plot size','area sq','area sqft','sqft','land area','gross area','plot area','size sq','size'],
     price:      ['land cost aed','land cost','total cost','asking price','sale price','price aed','price','cost','amount','value'],
-    gfa:        ['gfa sq','gfa sqm','gfa','gross floor area','gross floor'],
-    nfa:        ['nfa sqm','nfa','net floor area','net floor'],
+    gfa:        ['gfa sq','gfa sqft','gfa','gross floor area','gross floor'],
+    nfa:        ['nfa sqft','nfa','net floor area','net floor'],
     far:        ['far','floor area ratio','plot ratio'],
     pricePerGfa:['land cost price per gfa','price per gfa','cost per gfa','land cost per gfa'],
     bua:        ['bua','built up area','built-up','builtup'],
@@ -2259,7 +2261,7 @@ function confirmImport(){
 
 function exportCSV(){downloadCSV(plots,'plots_export.csv');}
 function downloadCSV(data,filename){
-  var hdrs=['Plot No','Development','Status','Type','Size (sqm)','Price (AED)','GFA','NFA','FAR','BUA','Latitude','Longitude','Notes','Video URL'];
+  var hdrs=['Plot No','Development','Status','Type','Size (sqft)','Price (AED)','GFA','NFA','FAR','BUA','Latitude','Longitude','Notes','Video URL'];
   var rows=data.map(function(p){return[p.no,p.dev,p.status,p.type,p.size,p.price,p.gfa,p.nfa,p.far,p.bua,p.lat,p.lng,p.notes,p.videoUrl].map(function(v){return'"'+(v||'').toString().replace(/"/g,'""')+'"';}).join(',');});
   var blob=new Blob([hdrs.join(',')+'\n'+rows.join('\n')],{type:'text/csv'});
   var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;a.click();
@@ -2268,17 +2270,17 @@ function downloadCSV(data,filename){
 window.printPlot=function(id){
   var p=plots.find(function(x){return x.id===id;});if(!p)return;
   var price=parseFloat(p.price)||0,size=parseFloat(p.size)||0;
-  var ppm=(size&&price)?'AED '+Math.round(price/size).toLocaleString()+' /sqm':'—';
+  var ppm=(size&&price)?'AED '+Math.round(price/size).toLocaleString()+' /sqft':'—';
   var totalM=price?(price/1000000).toFixed(2)+' M AED':'—';
   var today=new Date().toLocaleDateString('en-GB',{year:'numeric',month:'long',day:'numeric'});
   var reportId='RPT-'+String(p.id).slice(-6).toUpperCase();
   var sbc=p.status==='Available'?'#059669':p.status==='Reserved'?'#d97706':'#dc2626';
   var sbg=p.status==='Available'?'rgba(16,185,129,0.1)':p.status==='Reserved'?'rgba(217,119,6,0.1)':'rgba(220,38,38,0.1)';
   var areaRows='';
-  if(p.gfa)areaRows+='<tr><td>GFA</td><td>'+esc(p.gfa)+' sqm</td></tr>';
-  if(p.nfa)areaRows+='<tr><td>NFA</td><td>'+esc(p.nfa)+' sqm</td></tr>';
+  if(p.gfa)areaRows+='<tr><td>GFA</td><td>'+esc(p.gfa)+' sqft</td></tr>';
+  if(p.nfa)areaRows+='<tr><td>NFA</td><td>'+esc(p.nfa)+' sqft</td></tr>';
   if(p.far)areaRows+='<tr><td>FAR</td><td>'+esc(p.far)+'</td></tr>';
-  if(p.bua)areaRows+='<tr><td>BUA</td><td>'+esc(p.bua)+' sqm</td></tr>';
+  if(p.bua)areaRows+='<tr><td>BUA</td><td>'+esc(p.bua)+' sqft</td></tr>';
 
   /* ── Decide what to show in the image area ── */
   var hasImage=p.image&&p.image.startsWith('data:');
@@ -2401,9 +2403,9 @@ window.printPlot=function(id){
         '<div class="col-m">'+
           '<div class="sec">Financial Summary</div>'+
           '<div class="mgrid">'+
-            '<div class="mc mc-d"><div class="ml">Plot Size</div><div class="mv">'+(size?size.toLocaleString()+'<span style="font-size:10px;font-weight:600;color:#94a3b8;margin-left:2px;">sqm</span>':'—')+'</div></div>'+
+            '<div class="mc mc-d"><div class="ml">Plot Size</div><div class="mv">'+(size?size.toLocaleString()+'<span style="font-size:10px;font-weight:600;color:#94a3b8;margin-left:2px;">sqft</span>':'—')+'</div></div>'+
             '<div class="mc mc-g"><div class="ml">Asking Price</div><div class="mv mv-g" style="font-size:13px;">'+(price?'AED '+price.toLocaleString():'—')+'</div></div>'+
-            '<div class="mc mc-b"><div class="ml">Price / sqm</div><div class="mv mv-b" style="font-size:13px;">'+ppm+'</div></div>'+
+            '<div class="mc mc-b"><div class="ml">Price / sqft</div><div class="mv mv-b" style="font-size:13px;">'+ppm+'</div></div>'+
             '<div class="mc mc-p"><div class="ml">Total Value</div><div class="mv mv-p" style="font-size:15px;">'+totalM+'</div></div>'+
           '</div>'+
           (areaRows?'<div class="sec">Area Metrics</div><table class="dtbl">'+areaRows+'</table>':'')+
@@ -2463,7 +2465,7 @@ window.startVideoCall=function(plotId){
   document.body.appendChild(modal);
 };
 
-function _buildMsg(p){return'Plot: '+(p.no||'')+'\nDevelopment: '+(p.dev||'')+'\nStatus: '+(p.status||'')+'\nSize: '+(p.size||'')+' sqm\nPrice: AED '+(p.price||'')+(p.type?'\nType: '+p.type:'')+(p.lat&&p.lng?'\nGPS: '+p.lat+', '+p.lng:'')+(p.notes?'\nNotes: '+p.notes:'');}
+function _buildMsg(p){return'Plot: '+(p.no||'')+'\nDevelopment: '+(p.dev||'')+'\nStatus: '+(p.status||'')+'\nSize: '+(p.size||'')+' sqft\nPrice: AED '+(p.price||'')+(p.type?'\nType: '+p.type:'')+(p.lat&&p.lng?'\nGPS: '+p.lat+', '+p.lng:'')+(p.notes?'\nNotes: '+p.notes:'');}
 function _shareWhatsapp(){var p=plots.find(function(x){return x.id===_sharePlotId;});if(!p)return;window.open('https://wa.me/?text='+encodeURIComponent(_buildMsg(p)),'_blank');var m=document.getElementById('shareModal');if(m)m.remove();}
 function _shareEmail(){var p=plots.find(function(x){return x.id===_sharePlotId;});if(!p)return;window.open('mailto:?subject='+encodeURIComponent('Plot '+(p.no||'')+' - '+(p.dev||''))+'&body='+encodeURIComponent(_buildMsg(p)),'_blank');var m=document.getElementById('shareModal');if(m)m.remove();}
 function _shareCopy(){var p=plots.find(function(x){return x.id===_sharePlotId;});if(!p)return;navigator.clipboard.writeText(_buildMsg(p)).then(function(){showToastNotification('Copied!','success');});var m=document.getElementById('shareModal');if(m)m.remove();}
@@ -2581,7 +2583,7 @@ function connectSync(autoRoom){
     if(!data){
       if(plots.length > 0){
         plots.forEach(function(p){
-          var sp = Object.assign({}, p);
+          var sp = JSON.parse(JSON.stringify(p));
           if(typeof sp.image==='string'&&sp.image.startsWith('data:')) sp.image='';
           _fbRoomRef.child(String(p.id).replace(/\./g, '_')).set(sp);
         });
@@ -2594,7 +2596,7 @@ function connectSync(autoRoom){
       });
       if(toPush.length > 0){
         toPush.forEach(function(p){
-          var sp = Object.assign({}, p);
+          var sp = JSON.parse(JSON.stringify(p));
           if(typeof sp.image==='string'&&sp.image.startsWith('data:')) sp.image='';
           _fbRoomRef.child(String(p.id).replace(/\./g, '_')).set(sp);
         });
@@ -2750,8 +2752,8 @@ function esc(str){if(str===null||str===undefined)return'';return String(str).rep
 function parseNum(v){if(v===null||v===undefined||v==='')return NaN;var s=String(v).replace(/,/g,'').replace(/[^\d.\-]/g,'').trim();return s===''||s==='-'?NaN:parseFloat(s);}
 /* Format number with commas, or return dash */
 function fmtN(v,dec){var n=parseNum(v);if(isNaN(n))return'—';return dec?n.toFixed(dec).replace(/\B(?=(\d{3})+(?!\d))/g,','):Math.round(n).toLocaleString();}
-/* Price per sqft: 1 sqm = 10.764 sqft */
-function pricePerSqft(price,size){var pr=parseNum(price),sz=parseNum(size);if(isNaN(pr)||isNaN(sz)||sz===0)return'—';return'AED '+Math.round(pr/(sz*10.764)).toLocaleString()+'/sqft';}
+/* Price per sqft: 1 sqft = 10.764 sqft */
+function pricePerSqft(price,size){var pr=parseNum(price),sz=parseNum(size);if(isNaN(pr)||isNaN(sz)||sz===0)return'—';return'AED '+Math.round(pr/sz).toLocaleString()+'/sqft';}
 
 window.showSyncModal=showSyncModal;window.connectSync=connectSync;window.disconnectSync=disconnectSync;window.pushSync=pushSync;window.pullSync=pullSync;window.startAutoSync=startAutoSync;
 window.startSetOnMapMode=startSetOnMapMode;window.startSetOnMapModeForPlot=startSetOnMapModeForPlot;window.cancelSetOnMapMode=cancelSetOnMapMode;
